@@ -3,3 +3,10 @@ dist/
 *.log
 browser-*.png
 src (1).zip
+**/__pycache__/
+*.py[cod]
+backend/.venv/
+backend/build/
+backend/dist/
+backend/.pytest_cache/
+backend/src/*.egg-info/

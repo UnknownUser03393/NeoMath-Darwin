@@ -1,0 +1,58 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "neomath"
+version = "1.0.0"
+description = "NeoMath - The Debugger for Mathematics"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "NeoMath Team"}]
+dependencies = ["pywebview>=5.0", "sympy>=1.14"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "sympy>=1.12",
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "pyinstaller>=6.0",
+  "python-pptx>=1.0",
+]
+
+[project.scripts]
+neomath = "neomath.__main__:main"
+
+[tool.scikit-build]
+cmake.version = ">=3.20"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/neomath"]
+sdist.include = ["cpp/**", "src/neomath/ui/**", "tests/**", "docs/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+packages = ["neomath"]
+
+[[tool.mypy.overrides]]
+module = "neomath_core"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sympy.*"
+ignore_missing_imports = true

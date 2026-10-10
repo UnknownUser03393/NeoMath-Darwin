@@ -2,6 +2,8 @@
 
 Darwin UI connected to the original Python HTTP bridge and C++ MathCore in `D:\Development\NeoMath`. No mock kernel is used by the app.
 
+The current Python/C++ backend source, including the SymPy CAS worker, is now bundled in [`backend/`](backend/). See [BACKEND_SETUP.md](BACKEND_SETUP.md) for macOS installation and iOS Simulator API setup.
+
 Notebook calls now use `engine: auto`: C++ MathCore handles its supported subset, with a real SymPy CAS fallback for irrational roots, higher-degree equations, real inequalities, common functions and bare expressions. The UI shows the actual engine; SymPy results are `cas_verified`, not C++ proof certificates. Symbolic operations run in a separate process with a six-second limit and an allowlisted mathematical parser (no Python eval). Install `sympy>=1.14` in the backend Python environment. Predicates currently support one real variable, not parameterized systems.
 
 For a demonstration, open the built-in **无理根与正负号**, **三次方程**, **不等式**, **函数化简与微积分**, or **求导与积分** examples. Ctrl+Space offers transformations; the transformation menu also provides simplify, differentiate and integrate. Calculus results are not equivalent derivation steps; integration returns one antiderivative without a constant. Write `\pm` / `\mp` directly (including `x=\pm1`): source retains the LaTeX commands instead of converting them to Unicode, while KaTeX renders the signs. Common `\frac{…}{…}` and `\sqrt{…}` input is understood by the CAS, but this is not a full LaTeX editor.
