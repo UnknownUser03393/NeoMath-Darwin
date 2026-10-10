@@ -23,6 +23,8 @@ export interface FileMeta {
 }
 export interface MathSet {
   kind: string
+  display?: string
+  latex?: string
   values?: string[]
   excluded?: string[]
   lower?: string
@@ -32,6 +34,7 @@ export interface MathSet {
 }
 export interface Probe {
   value: string
+  hasPrevious?: boolean
   previousDefined?: boolean
   currentDefined?: boolean
   previousPredicateResult?: boolean
@@ -57,6 +60,7 @@ export function compareProbe(result: ProbeTrace): Probe {
   const previous = result.steps.at(-2)
   return {
     value: result.value,
+    hasPrevious: previous !== undefined,
     previousDefined: previous?.defined,
     currentDefined: current?.defined,
     previousPredicateResult: previous?.predicateResult,
@@ -69,12 +73,18 @@ export function compareProbe(result: ProbeTrace): Probe {
   }
 }
 export interface Trace {
+  engine?: string
   states: {
     source: string
     canonical?: string
     solutionSet?: MathSet
     domain?: MathSet
     trustLevel?: string
+    verification?: { status: "verified" | "refuted" | "unknown"; target: string; method: string; limitations: string[] }
+    reason?: string
+    engine?: string
+    latex?: string
+    variable?: string
   }[]
   relations: {
     reason: string
@@ -124,7 +134,7 @@ export async function callEnvelope<T>(
     const response = await fetch(`${base}/${method}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(["parseDocument", "analyzeDocument", "runTrace", "replay", "getCompletions", "executeTransformation", "evaluateProbe"].includes(method) ? { engine: "auto", ...payload } : payload),
       signal: controller.signal,
     })
     const envelope: Envelope<T> = await response.json()
@@ -142,6 +152,8 @@ export async function callEnvelope<T>(
 }
 export function formatSet(set?: MathSet): string {
   if (!set) return "—"
+  if (set.display) return set.display
+  if (set.kind === "expression") return "表达式（不求解集）"
   if (set.kind === "finite") return `{${(set.values ?? []).join(", ")}}`
   if (set.kind === "empty") return "∅"
   if (set.kind === "all_real") return "ℝ"

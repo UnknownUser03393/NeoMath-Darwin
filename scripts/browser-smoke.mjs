@@ -48,6 +48,7 @@ try {
     () => document.querySelectorAll('[role="tabpanel"] p').length >= 6,
   )
   assert.match(await page.getByRole("tabpanel").innerText(), /False/)
+  assert.match(await page.getByRole("tabpanel").innerText(), /Single-point evaluation only; not a proof of equivalence or completeness/)
   console.log("Trace and probe checked")
   await page.getByText("More", { exact: true }).click()
   await page.getByRole("button", { name: "Edit", exact: true }).click()

@@ -1,6 +1,18 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { toLatex, renderMath } from "../src/math-format.ts"
+
+test("common signs, exact decimal notation and variable names render", () => {
+  for (const source of [String.raw`x=\pm1`, String.raw`x=\mp1`, String.raw`x=\pm\sqrt{2}`]) {
+    assert.equal(toLatex(source), source)
+    assert.equal(renderMath(source).error, null, source)
+  }
+  for (const source of ["y=±1", "t=2±1", "y=±1∓1", ".5y=1", "theta=0.5", "y×(y−1)=0", "t=√4", "x=1÷2"]) {
+    assert.ok(renderMath(source).html, source)
+  }
+  assert.equal(toLatex("y=±1"), "y = \\pm 1")
+  assert.equal(toLatex("t=2±1"), "t = 2 \\pm 1")
+})
 import { formatSet } from "../src/backend.ts"
 
 test("display conversion preserves nested fractions, roots, powers and disjunctions", () => {

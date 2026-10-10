@@ -72,7 +72,7 @@ export const stateMeta: Record<StateKey, StateMeta> = {
   equivalent: { en: "Equivalent", zh: "等价", tone: "ok" },
   gainedSolution: { en: "Extraneous solution", zh: "增解", tone: "bad" },
   domainShift: { en: "Domain changed", zh: "定义域改变", tone: "bad" },
-  unverified: { en: "Unverified", zh: "无法验证", tone: "warn" },
+  unverified: { en: "Unknown", zh: "无法判断", tone: "warn" },
   initial: { en: "Initial state", zh: "初始状态", tone: "none" },
   lostSolution: { en: "Lost solution", zh: "丢解", tone: "bad" },
   tainted: { en: "Affected by Step 2", zh: "受步骤2影响", tone: "warn" },

@@ -305,7 +305,10 @@ button:disabled {
 .live-editor-host .cm-focused { outline: none; }
 .live-editor-host .cm-line { position: relative; padding: 12px 8px; min-height: 56px; line-height: 1.6; font-size: 18px; }
 .live-editor-host .live-active { font-family: var(--font-mono); font-size: 20px; background: color-mix(in srgb, var(--accent-foreground) 3%, transparent); }
-.live-formula { font-size: 22px; max-width: 100%; overflow-x: auto; vertical-align: middle; }
+/* KaTeX radicals can extend a fraction of a pixel beyond their inline box.
+   Scrolling this box creates a vertical bar which then causes a horizontal bar.
+   Let the editor scroller own overflow instead of each individual formula. */
+.live-formula { font-size: 22px; max-width: 100%; overflow: visible; vertical-align: middle; }
 .live-check-marker { display: inline-flex; align-items: center; max-width: 100%; margin-left: 16px; padding: 2px 7px; border-radius: 5px; font: 12px/1.6 var(--font-sans); color: var(--label-secondary); background: var(--surface-subtle); vertical-align: middle; white-space: normal; text-align: left; }
 .live-check-marker[data-check="root_fault"], .live-check-marker[data-check="parse_error"] { position: absolute; z-index: 2; right: calc(100% + 36px); top: 28px; transform: translateY(-50%); width: max-content; max-width: calc(var(--error-gutter) - 36px); max-height: 40px; overflow: hidden; margin-left: 0; color: var(--status-fault); background: color-mix(in srgb, var(--status-fault) 7%, transparent); }
 .live-check-marker[data-check="tainted"] { color: var(--status-caution); }

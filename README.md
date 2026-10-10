@@ -2,6 +2,10 @@
 
 Darwin UI connected to the original Python HTTP bridge and C++ MathCore in `D:\Development\NeoMath`. No mock kernel is used by the app.
 
+Notebook calls now use `engine: auto`: C++ MathCore handles its supported subset, with a real SymPy CAS fallback for irrational roots, higher-degree equations, real inequalities, common functions and bare expressions. The UI shows the actual engine; SymPy results are `cas_verified`, not C++ proof certificates. Symbolic operations run in a separate process with a six-second limit and an allowlisted mathematical parser (no Python eval). Install `sympy>=1.14` in the backend Python environment. Predicates currently support one real variable, not parameterized systems.
+
+For a demonstration, open the built-in **无理根与正负号**, **三次方程**, **不等式**, **函数化简与微积分**, or **求导与积分** examples. Ctrl+Space offers transformations; the transformation menu also provides simplify, differentiate and integrate. Calculus results are not equivalent derivation steps; integration returns one antiderivative without a constant. Write `\pm` / `\mp` directly (including `x=\pm1`): source retains the LaTeX commands instead of converting them to Unicode, while KaTeX renders the signs. Common `\frac{…}{…}` and `\sqrt{…}` input is understood by the CAS, but this is not a full LaTeX editor.
+
 ## Run locally
 
 ```powershell
@@ -16,6 +20,8 @@ Vite development and preview servers proxy `/api` to `http://127.0.0.1:8765`. Se
 
 ## Connected workflows
 
+- Common notebook notation is parsed by MathCore: `±` / `∓` (paired signs in one equation choose the same branch), Unicode minus/multiplication/division, `√`, exact finite decimals, and one ASCII variable identifier per derivation. For example `y^2=1` → `y=±1` is equivalent and `0.1t=0.3` has the exact solution `t=3`. Different variables in the same derivation are rejected. Irrational roots, higher-degree solving and inequalities remain outside this Core's verified range and now use the SymPy fallback; unsupported CAS results remain unverified.
+
 - Math renders with bundled KaTeX fonts/CSS throughout the canvas, steps, inspector, completion suggestions and live editor previews. The display converter supports nested fractions, roots, powers, sets and disjunctions without modifying MathCore source. XDLT MathML and opaque TeX also use KaTeX in the sandboxed preview.
 
 - Original `.nm` workspace list and loading; new derivations; `.nm` / JSON import creates a new copy. Original XDLT workspace files are listed alongside notebooks, and new writing documents use `.xdlt`.
@@ -24,7 +30,7 @@ Vite development and preview servers proxy `/api` to `http://127.0.0.1:8765`. Se
 - Ink is stored per notebook in the optional `darwinInk` field; undo/redo changes are saved with the document. Existing prototype browser ink is left untouched.
 - Auto check is enabled by default: opening or editing equations schedules analysis after 250 ms. IME composition pauses checks; rapid changes are coalesced, old requests are cancelled, stale replies are ignored. Manual Check and Ctrl+Enter remain available, and Auto check can be disabled.
 - `parseDocument` provides syntax diagnostics and expected tokens. First analysis uses `runTrace`; later checks use `replay` from the earliest changed equation, preserving the unchanged prefix and reporting actual backend `cacheHits` and duration. Metadata, prose and ink edits do not recheck mathematics. Imported transformation prefixes are also reused.
-- Semantic completions (Ctrl+Space), structured transformations, first-fault navigation, explanations with the original local/Qwen fallback, and `.nm` export are available. Mathematical truth continues to come from C++ MathCore.
+- Semantic completions (Ctrl+Space), structured transformations, first-fault navigation, explanations with the original local/Qwen fallback, and `.nm` export are available. Mathematical results come from C++ MathCore or the explicitly identified SymPy fallback.
 - Automatic witnesses come from trace relations; manual probes call `evaluateProbe` on the selected derivation prefix.
 - Settings reads original backend workspace and AI configuration; model edits use `saveSettings`.
 

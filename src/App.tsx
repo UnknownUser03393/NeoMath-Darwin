@@ -243,9 +243,9 @@ function Workspace() {
     sel?.kind === "rel" ? (relations[sel.id]?.from ?? null) : null
   const selectedRel = sel?.kind === "rel" ? sel.id : null
 
-  const selectStep = (n: number) => {
+  const selectStep = (n: number, inspect = true) => {
     setSel({ kind: "step", n })
-    setOpen(true)
+    if (inspect) setOpen(true)
   }
   const selectRel = (id: RelId) => {
     setSel({ kind: "rel", id })

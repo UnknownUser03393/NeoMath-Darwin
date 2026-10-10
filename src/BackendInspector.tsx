@@ -15,12 +15,14 @@ import { M, StatusLine } from "./ui"
 function Evaluation({ probe }: { probe: Probe }) {
   return (
     <div className="space-y-3 rounded-[14px] bg-subtle p-3 text-[13px]">
+      <p className="text-ink2">Single-point evaluation only; not a proof of equivalence or completeness.</p>
       {(["previous", "current"] as const).map((side) => (
         <div key={side}>
           <p className="text-ink2">
             {side === "previous" ? "Before" : "After"}
           </p>
           <p>
+            {side === "previous" && probe.hasPrevious === false ? "Not applicable — no previous step" : <>
             <M>{`${probe[`${side}LeftValue`] ?? "—"} = ${probe[`${side}RightValue`] ?? "—"}`}</M> ·{" "}
             {probe[`${side}Defined`] === false
               ? "Undefined"
@@ -28,7 +30,7 @@ function Evaluation({ probe }: { probe: Probe }) {
                 ? "True"
                 : probe[`${side}PredicateResult`] === false
                   ? "False"
-                  : "Unverified"}
+                  : "Unknown"}</>}
           </p>
         </div>
       ))}
@@ -64,6 +66,7 @@ export default function BackendInspector({
   }, [target, document])
   const relation = trace?.relations[index - 1]
   const state = trace?.states[index]
+  const variable = state?.variable ?? (state?.canonical?.match(/[A-Za-z_][A-Za-z_0-9]*/g) ?? []).find(name => !["sqrt", "or"].includes(name)) ?? "x"
   const status = traceState(trace, index)
   const run = async () => {
     const token = ++request.current
@@ -134,18 +137,18 @@ export default function BackendInspector({
             {tab === "overview" && (
               <div className="space-y-4 rounded-[18px] bg-panel p-4">
                 <p className="text-[13px] text-ink2">
-                  {relation?.reason ??
+                  {trace?.diagnostics[index]?.message ?? relation?.reason ??
                     (trace
                       ? stateMeta[status].en
                       : "Run Check to compute the mathematical state.")}
                 </p>
                 <div>
                   <p className="text-[12px] text-ink2">Solution set</p>
-                  <M>{formatSet(state?.solutionSet)}</M>
+                  <M>{state?.solutionSet?.latex ?? formatSet(state?.solutionSet)}</M>
                 </div>
                 <div>
                   <p className="text-[12px] text-ink2">Domain</p>
-                  <M>{formatSet(state?.domain)}</M>
+                  <M>{state?.domain?.latex ?? formatSet(state?.domain)}</M>
                 </div>
                 {!!relation?.lostSolutions?.length && (
                   <p>Lost: {relation.lostSolutions.join(", ")}</p>
@@ -160,13 +163,13 @@ export default function BackendInspector({
                 <h3 className="font-semibold">Automatic witness</h3>
                 {relation?.probe ? (
                   <>
-                    <p>x = {relation.probe.value}</p>
+                    <p>{variable} = {relation.probe.value}</p>
                     <Evaluation probe={relation.probe} />
                   </>
                 ) : (
                   <p className="text-[13px] text-ink2">
                     {trace
-                      ? "No witness returned for this relation."
+                      ? "No counterexample returned; this alone does not prove equivalence."
                       : "Run Check to obtain evidence."}
                   </p>
                 )}
@@ -178,7 +181,7 @@ export default function BackendInspector({
                   className="space-y-3"
                 >
                   <label className="block text-[13px]">
-                    Manual probe · x
+                    Manual probe · {variable}
                     <input
                       required
                       aria-label="Probe value"
@@ -204,8 +207,12 @@ export default function BackendInspector({
             )}
             {tab === "details" && (
               <div className="space-y-3 rounded-[18px] bg-panel p-4 text-[13px]">
-                <p>Engine: C++ MathCore</p>
+                <p>Engine: {trace?.engine === "sympy" ? "SymPy CAS（符号验证，非 Core 证书）" : "C++ MathCore"}</p>
                 <p>Trust: {state?.trustLevel ?? "Not checked"}</p>
+                <p>Verification: {state?.verification?.status ?? "unknown"}</p>
+                <p>Target: {state?.verification?.target ?? "Not specified"}</p>
+                <p>Method: {state?.verification?.method ?? "Not specified"}</p>
+                {state?.verification?.limitations.map(limit => <p key={limit} className="text-ink2">Limit: {limit}</p>)}
                 <pre className="overflow-x-auto whitespace-pre-wrap">
                   {JSON.stringify(
                     { state, relation, diagnostic: trace?.diagnostics[index] },

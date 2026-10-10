@@ -5,6 +5,11 @@ import { Chip, M } from "./ui"
 import { transitionPage } from "./motion"
 
 const examples = [
+  { title: "无理根与正负号", note: "SymPy · 二次方程等价验证", lines: ["x^2=2", "x=±sqrt(2)"] },
+  { title: "三次方程", note: "SymPy · 求解并检查", lines: ["x^3=2", "x=2^(1/3)"] },
+  { title: "不等式", note: "SymPy · 实数区间解集", lines: ["x^2<4", "abs(x)<2"] },
+  { title: "函数化简与微积分", note: "Ctrl+Space · 化简、求导、积分", lines: ["sin(x)^2+cos(x)^2", "1"] },
+  { title: "求导与积分", note: "SymPy · 选中公式，变形 → differentiate / integrate", lines: ["x^3+sin(x)"] },
   {
     title: "Lost roots",
     note: "Dividing by a variable",
@@ -183,7 +188,7 @@ export default function Documents({
                 Examples
               </h2>
               <p className="text-[13px] text-ink2">
-                Open a new copy, then Check with MathCore.
+                Open a new copy, then Check with MathCore / SymPy CAS.
               </p>
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">

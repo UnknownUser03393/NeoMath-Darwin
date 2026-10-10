@@ -7,14 +7,14 @@ export function toLatex(source: string): string {
   let raw = source.trim().replace(/^\$\$([\s\S]*)\$\$$/, "$1").replace(/^\$([\s\S]*)\$$/, "$1")
   if (!raw || raw === "—" || raw === "Unverified") throw new Error("No formula")
   if (/\\[a-zA-Z]+/.test(raw)) return raw
-  raw = raw.replace(/[−–]/g, "-").replace(/[×·]/g, "*").replace(/√/g, "sqrt")
+  raw = raw.replace(/[−–]/g, "-").replace(/[×·⋅]/g, "*").replace(/÷/g, "/").replace(/√/g, "sqrt")
   const excluded = raw.match(/^ℝ\s*\\\s*\{(.*)\}$/)
   if (excluded) return `\\mathbb{R} \\setminus \\left\\{${excluded[1].split(",").map(toLatex).join(",\\,")}\\right\\}`
   const interval = raw.match(/^([\[(])([^,]+),([^,]+)([\])])$/)
   if (interval) return `\\left${interval[1]}${toLatex(interval[2])},\\,${toLatex(interval[3])}\\right${interval[4]}`
   if (raw.includes("ℝ") || raw.includes("∅") || raw.includes("∞")) return raw.replace(/ℝ/g, "\\mathbb{R}").replace(/∅/g, "\\varnothing").replace(/∞/g, "\\infty")
   if (/^\{.*\}$/.test(raw)) return `\\left\\{${raw.slice(1, -1).split(",").map(value => toLatex(value)).join(",\\,")}\\right\\}`
-  const tokens = raw.match(/sqrt|or|\d+(?:\.\d+)?|[a-zA-Z]|>=|<=|!=|[+\-*/^()=<>≥≤≠]/g) ?? []
+  const tokens = raw.match(/[a-zA-Z_][a-zA-Z_0-9]*|(?:\d+(?:\.\d*)?|\.\d+)|>=|<=|!=|[+\-±∓*/^()=<>≥≤≠]/g) ?? []
   if (tokens.join("") !== raw.replace(/\s/g, "")) throw new Error("Unsupported formula notation")
   let index = 0
   const peek = () => tokens[index]
@@ -31,7 +31,16 @@ export function toLatex(source: string): string {
       const radicand = atom()
       return { tex: `\\sqrt{${radicand.inner ?? radicand.tex}}` }
     }
-    if (token && /^(\d+(?:\.\d+)?|[a-zA-Z])$/.test(token)) return { tex: token }
+    if (["sin", "cos", "tan", "asin", "acos", "atan", "exp", "log", "ln", "abs"].includes(token)) {
+      expect("(")
+      const argument = expression().tex
+      expect(")")
+      if (token === "abs") return { tex: `\\left|${argument}\\right|` }
+      const name = ({ asin: "arcsin", acos: "arccos", atan: "arctan" } as Record<string, string>)[token] ?? token
+      return { tex: `\\${name}\\left(${argument}\\right)` }
+    }
+    if (token === "pi") return { tex: "\\pi" }
+    if (token && /^(?:\d+(?:\.\d*)?|\.\d+|[a-zA-Z_][a-zA-Z_0-9]*)$/.test(token)) return { tex: token.replace(/_/g, "\\_") }
     throw new Error("Incomplete formula")
   }
   const power = (): Expression => {
@@ -42,12 +51,12 @@ export function toLatex(source: string): string {
     return { tex: `${base.tex}^{${exponent.inner ?? exponent.tex}}` }
   }
   const unary = (): Expression => {
-    if (peek() === "-" || peek() === "+") { const sign = take(); return { tex: `${sign}${unary().tex}` } }
+    if (["-", "+", "±", "∓"].includes(peek())) { const sign = take(); return { tex: `${sign === "±" ? "\\pm " : sign === "∓" ? "\\mp " : sign}${unary().tex}` } }
     return power()
   }
   const product = (): Expression => {
     let left = unary()
-    while (peek() === "*" || peek() === "/" || peek() === "(" || peek() === "sqrt" || /^[a-zA-Z0-9]/.test(peek() ?? "") && peek() !== "or") {
+    while (peek() === "*" || peek() === "/" || peek() === "(" || peek() === "sqrt" || /^[a-zA-Z_0-9.]/.test(peek() ?? "") && peek() !== "or") {
       const operation = peek() === "*" || peek() === "/" ? take() : "implicit"
       const right = unary()
       left = { tex: operation === "/" ? `\\frac{${left.inner ?? left.tex}}{${right.inner ?? right.tex}}` : `${left.tex}${operation === "*" ? " \\cdot " : "\\,"}${right.tex}` }
@@ -56,7 +65,7 @@ export function toLatex(source: string): string {
   }
   const expression = (): Expression => {
     let left = product()
-    while (peek() === "+" || peek() === "-") { const operation = take(); left = { tex: `${left.tex} ${operation} ${product().tex}` } }
+    while (["+", "-", "±", "∓"].includes(peek())) { const operation = take(); left = { tex: `${left.tex} ${operation === "±" ? "\\pm" : operation === "∓" ? "\\mp" : operation} ${product().tex}` } }
     return left
   }
   const relation = () => {

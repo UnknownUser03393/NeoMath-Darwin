@@ -90,7 +90,7 @@ const previewState = StateField.define<{ focused: boolean; diagnostics: Record<n
       }
       if (active && !prose) {
         const slots = new Set<number>()
-        if (/[=+\-*/^,(]\s*$/.test(line.text)) slots.add(line.to)
+        if (/[=+\-±∓*/^,(]\s*$/.test(line.text)) slots.add(line.to)
         for (const match of line.text.matchAll(/\(\s*\)/g)) slots.add(line.from + match.index! + 1)
         for (const position of slots) ranges.push(Decoration.widget({ widget: new Slot(position), side: 1 }).range(position))
       }
@@ -108,7 +108,7 @@ const previewState = StateField.define<{ focused: boolean; diagnostics: Record<n
   provide: field => EditorView.decorations.from(field, value => value.decorations),
 })
 
-export default function LiveEditor({ visible, onSelectStep }: { visible: boolean; onSelectStep: (step: number) => void }) {
+export default function LiveEditor({ visible, onSelectStep }: { visible: boolean; onSelectStep: (step: number, inspect?: boolean) => void }) {
   const workspace = useWorkspace()
   const latest = useRef(workspace)
   latest.current = workspace
@@ -133,6 +133,15 @@ export default function LiveEditor({ visible, onSelectStep }: { visible: boolean
       EditorView.contentAttributes.of({ "aria-label": "Live Preview source", spellcheck: "false" }),
       keymap.of([
         { key: "Escape", run: () => { setTools(false); setCompletion(0); return true } },
+        { key: "Space", run: editor => {
+          if (editor.composing || !editor.state.selection.main.empty) return false
+          const head = editor.state.selection.main.head
+          const match = editor.state.sliceDoc(Math.max(0, head - 12), head).match(/\\(times|cdot|div|leq|geq)$/)
+          if (!match) return false
+          const symbols: Record<string, string> = { times: "×", cdot: "·", div: "÷", leq: "≤", geq: "≥" }
+          editor.dispatch({ changes: { from: head - match[0].length, to: head, insert: symbols[match[1]] }, selection: { anchor: head - match[0].length + 1 }, annotations: Transaction.userEvent.of("input") })
+          return true
+        } },
         { key: "Mod-Shift-z", run: redo },
         { key: "Mod-Enter", run: () => { void latest.current.check(); return true } },
         { key: "Mod-s", run: () => { void latest.current.save().catch(() => {}); return true } },
@@ -201,13 +210,15 @@ export default function LiveEditor({ visible, onSelectStep }: { visible: boolean
     sourceLines(workspace.document?.cells ?? []).forEach((line, index) => {
       if (line.cell.kind !== "markdown") step++
       if (line.cell.kind === "transform") transforms[index + 1] = workspace.trace?.states[step]?.source ?? null
+      const state = workspace.trace?.states[step]
+      if (line.cell.kind !== "markdown" && state?.latex && state.source === line.text && !renderMath(line.text).html) transforms[index + 1] = `\\displaystyle ${state.latex}`
     })
     workspace.trace?.diagnostics.forEach((item, index) => { diagnostics[index] = item.status })
     workspace.analysis?.parsed.steps.forEach((item, index) => { if (item.error) diagnostics[index] = "parse_error" })
     workspace.trace?.diagnostics.forEach((item, index) => {
       const relation = workspace.trace?.relations[index - 1]
       const changes = [relation?.lostSolutions?.length ? `丢根：${relation.lostSolutions.join(", ")}` : "", relation?.gainedSolutions?.length ? `增根：${relation.gainedSolutions.join(", ")}` : "", relation?.domainExpanded ? "定义域扩大" : relation?.domainShrunk ? "定义域缩小" : ""].filter(Boolean)
-      labels[index] = item.status === "root_fault" ? changes.join(" · ") || "定义域改变" : item.status === "tainted" ? "受前序错误影响" : item.status === "unverified" ? "尚未验证" : ""
+      labels[index] = item.status === "root_fault" ? changes.join(" · ") || "定义域改变" : item.status === "tainted" ? "受前序错误影响" : ["unverified", "unsupported"].includes(item.status) ? item.message || "当前 Core 无法验证此式" : ""
     })
     workspace.analysis?.parsed.steps.forEach((item, index) => { if (item.error) labels[index] = `语法：${item.error.message}` })
     view.current?.dispatch({ effects: [diagnosticsEffect.of(diagnostics), labelsEffect.of(labels), transformsEffect.of(transforms)] })
@@ -225,17 +236,22 @@ export default function LiveEditor({ visible, onSelectStep }: { visible: boolean
       editor.dispatch({ changes: { from: end, insert: `\n${source}` }, selection: { anchor: end + 1 + source.length }, annotations: [Transaction.userEvent.of("input.transform"), isolateHistory.of("full")], scrollIntoView: true })
       setTools(false); setCompletion(0); editor.focus()
     }} onDismiss={() => { setTools(false); setCompletion(0); view.current?.focus() }} /></div>}
-    <div ref={host} className="live-editor-host min-h-0 flex-1" onClick={event => {
+    <div ref={host} className="live-editor-host min-h-0 flex-1" onMouseDownCapture={event => {
+      const line = (event.target as Element).closest<HTMLElement>("[data-source-line]")
+      if (!line) return
+      const rows = sourceLines(latest.current.document?.cells ?? []).slice(0, Number(line.dataset.sourceLine))
+      if (rows.at(-1)?.cell.kind !== "markdown") onSelectStep(rows.filter(row => row.cell.kind !== "markdown").length, false)
+    }} onClick={event => {
       const slot = (event.target as Element).closest<HTMLElement>("[data-placeholder]")
       if (slot && view.current) { view.current.dispatch({ selection: { anchor: Number(slot.dataset.placeholder) }, effects: focusEffect.of(true) }); view.current.focus(); return }
       const line = (event.target as Element).closest<HTMLElement>("[data-source-line]")
-      if (!line || !(event.target as Element).closest(".live-check-marker")) return
+      if (!line) return
       const index = Number(line.dataset.sourceLine) - 1
       const rows = sourceLines(latest.current.document?.cells ?? []).slice(0, index + 1)
-      onSelectStep(rows.filter(row => row.cell.kind !== "markdown").length)
+      if (rows.at(-1)?.cell.kind !== "markdown") onSelectStep(rows.filter(row => row.cell.kind !== "markdown").length, !!(event.target as Element).closest(".live-check-marker"))
     }}><ErrorConnectors host={host} trace={workspace.trace} visible={visible} revision={canonical} /></div>
     <footer className="flex shrink-0 items-center gap-3 border-t hairline px-4 py-2 text-[12px] text-ink2">
-      <span className="mr-auto" role="status">{workspace.checkStatus === "Pending" && workspace.autoCheck ? "正在检查…" : workspace.checkStatus} · {workspace.saving}</span>
+      <span className="mr-auto" role="status">{workspace.checkStatus === "Pending" && workspace.autoCheck ? "正在检查…" : workspace.checkStatus} · {workspace.trace?.engine === "sympy" ? "SymPy CAS" : "MathCore"} · {workspace.saving}</span>
       <button className="text-accent" onMouseDown={event => event.preventDefault()} onClick={() => { setTools(value => !value); setPopupLeft(8); setPopupTop(Math.max(8, (host.current?.parentElement?.clientHeight ?? 360) - 320)) }}>变形…</button>
       <button className="text-accent" onMouseDown={event => event.preventDefault()} onClick={() => {
         const editor = view.current

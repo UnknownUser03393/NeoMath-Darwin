@@ -4,7 +4,7 @@ import { mathSignature } from "./math-session"
 import { useWorkspace } from "./workspace"
 import { M } from "./ui"
 interface Completion { id: string; label: string; available: boolean; risk?: string; preview?: string }
-const operations = ["factor", "expand", "move_terms", "divide", "multiply", "square_both_sides", "solve"]
+const operations = ["factor", "expand", "simplify", "differentiate", "integrate", "move_terms", "divide", "multiply", "square_both_sides", "solve"]
 export default function MathTools({ cellId, compact = false, completionRequest = 0, showOperations = true, onDismiss, onInsert }: { cellId: string | null; compact?: boolean; completionRequest?: number; showOperations?: boolean; onDismiss?: () => void; onInsert?: (source: string, afterId: string) => void }) {
   const workspace = useWorkspace()
   const { document, update, setError } = workspace
@@ -71,7 +71,7 @@ export default function MathTools({ cellId, compact = false, completionRequest =
     {busy && <p className="p-3 text-ink2">正在计算可用变形…</p>}
     {!busy && !items.some(item => item.available) && <p className="p-3 text-ink2">{selected ? "当前步骤没有可用建议" : "把光标放在公式行，再按 Ctrl+Space"}</p>}
     {items.filter(item => item.available).map(item => <button data-completion key={item.id} disabled={busy} onClick={() => void apply(item.id)} className="completion-option block w-full border-t hairline px-3 py-2 text-left focus:bg-accent/10 focus:outline-none">
-      <span className="flex justify-between gap-3 text-[13px]"><strong>{item.label}</strong><span className="text-ink2">{item.risk === "safe" ? "等价" : item.risk === "may_add_solutions" ? "可能增根" : item.risk === "may_lose_solutions" ? "可能丢根" : item.risk}</span></span>
+      <span className="flex justify-between gap-3 text-[13px]"><strong>{item.label}</strong><span className="text-ink2">{item.risk === "safe" ? "等价" : item.risk === "calculus" ? "运算结果，非等价步骤" : item.risk === "requires_review" ? "需检查定义域/解集" : item.risk === "may_add_solutions" ? "可能增根" : item.risk === "may_lose_solutions" ? "可能丢根" : item.risk}</span></span>
       <M className="mt-1 block text-[18px]">{item.preview ?? ""}</M>
     </button>)}
   </div>
