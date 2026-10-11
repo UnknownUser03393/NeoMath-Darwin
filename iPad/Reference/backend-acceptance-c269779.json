@@ -1,0 +1,821 @@
+{
+  "health": {
+    "ok": true,
+    "result": {
+      "apiVersion": "1",
+      "core": "C++20",
+      "domain": "real",
+      "exactArithmetic": "int64_checked_rational",
+      "maxAnalysisTimeMs": "500",
+      "maxAstDepth": "64",
+      "maxAstNodesPerStep": "10000",
+      "maxDocumentSteps": "200",
+      "maxIntegerBits": "63",
+      "maxSolverDegree": "2",
+      "offline": "true",
+      "trace": "root_fault_taint_probe",
+      "transformations": "factor,expand,move_terms,divide,multiply,square_both_sides,solve,verify",
+      "variables": "one ASCII identifier per derivation",
+      "qwen": "offline_fallback",
+      "uiTarget": "ui-mockups notebook",
+      "server": "neomath-http",
+      "notebook": true
+    }
+  },
+  "complete_roots": {
+    "ok": true,
+    "result": {
+      "states": [
+        {
+          "source": "x^2=2",
+          "canonical": "x^2 = 2",
+          "latex": "x^{2} = 2",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "cas_verified",
+          "verification": {
+            "status": "verified",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "finite",
+            "values": [
+              "-sqrt(2)",
+              "sqrt(2)"
+            ],
+            "latex": "\\left\\{- \\sqrt{2}, \\sqrt{2}\\right\\}"
+          },
+          "domain": {
+            "kind": "all_real"
+          },
+          "reason": "SymPy 符号计算"
+        },
+        {
+          "source": "x=±sqrt(2)",
+          "canonical": "x = sqrt(2) or x = -sqrt(2)",
+          "latex": "x = \\sqrt{2} \\quad\\text{or}\\quad x = - \\sqrt{2}",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "cas_verified",
+          "verification": {
+            "status": "verified",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "finite",
+            "values": [
+              "-sqrt(2)",
+              "sqrt(2)"
+            ],
+            "latex": "\\left\\{- \\sqrt{2}, \\sqrt{2}\\right\\}"
+          },
+          "domain": {
+            "kind": "all_real"
+          },
+          "reason": "SymPy 符号计算"
+        }
+      ],
+      "relations": [
+        {
+          "relation": "equivalent",
+          "reason": "SymPy 验证解集和定义域保持",
+          "lostSolutions": [],
+          "gainedSolutions": [],
+          "domainExpanded": false,
+          "domainShrunk": false
+        }
+      ],
+      "diagnostics": [
+        {
+          "status": "valid",
+          "message": "SymPy 已建立符号数学状态",
+          "title": "SymPy 已建立符号数学状态"
+        },
+        {
+          "status": "valid",
+          "message": "SymPy 已验证",
+          "title": "SymPy 已验证"
+        }
+      ],
+      "breakpointStep": null,
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.008874998457031325,
+      "cacheHits": 0
+    }
+  },
+  "parseDocument": {
+    "ok": true,
+    "result": {
+      "formatVersion": 1,
+      "source": "x^2=2",
+      "steps": [
+        {
+          "source": "x^2=2",
+          "kind": "expression",
+          "ast": {
+            "type": "equality",
+            "alternatives": [
+              {
+                "type": "equality",
+                "left": {
+                  "type": "power",
+                  "left": {
+                    "type": "symbol",
+                    "name": "x",
+                    "start": 0,
+                    "end": 1
+                  },
+                  "right": {
+                    "type": "integer",
+                    "value": 2,
+                    "start": 2,
+                    "end": 3
+                  },
+                  "start": 0,
+                  "end": 3
+                },
+                "right": {
+                  "type": "integer",
+                  "value": 2,
+                  "start": 4,
+                  "end": 5
+                },
+                "start": 0,
+                "end": 5
+              }
+            ],
+            "canonical": "x^2 = 2"
+          },
+          "error": null
+        }
+      ],
+      "engine": "core"
+    },
+    "metrics": {
+      "durationMs": 0.011667,
+      "cacheHits": 0
+    }
+  },
+  "analyzeDocument": {
+    "ok": true,
+    "result": {
+      "states": [
+        {
+          "source": "x^2=2",
+          "canonical": "x^2 = 2",
+          "latex": "x^{2} = 2",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "cas_verified",
+          "verification": {
+            "status": "verified",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "finite",
+            "values": [
+              "-sqrt(2)",
+              "sqrt(2)"
+            ],
+            "latex": "\\left\\{- \\sqrt{2}, \\sqrt{2}\\right\\}"
+          },
+          "domain": {
+            "kind": "all_real"
+          },
+          "reason": "SymPy 符号计算"
+        }
+      ],
+      "relations": [],
+      "diagnostics": [
+        {
+          "status": "valid",
+          "message": "SymPy 已建立符号数学状态",
+          "title": "SymPy 已建立符号数学状态"
+        }
+      ],
+      "breakpointStep": null,
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.012125001376261935,
+      "cacheHits": 0
+    }
+  },
+  "replay": {
+    "ok": true,
+    "result": {
+      "states": [
+        {
+          "source": "x^2=2",
+          "canonical": "x^2 = 2",
+          "latex": "x^{2} = 2",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "cas_verified",
+          "verification": {
+            "status": "verified",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "finite",
+            "values": [
+              "-sqrt(2)",
+              "sqrt(2)"
+            ],
+            "latex": "\\left\\{- \\sqrt{2}, \\sqrt{2}\\right\\}"
+          },
+          "domain": {
+            "kind": "all_real"
+          },
+          "reason": "SymPy 符号计算"
+        }
+      ],
+      "relations": [],
+      "diagnostics": [
+        {
+          "status": "valid",
+          "message": "SymPy 已建立符号数学状态",
+          "title": "SymPy 已建立符号数学状态"
+        }
+      ],
+      "breakpointStep": null,
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.006291000318014994,
+      "cacheHits": 0
+    }
+  },
+  "getCompletions": {
+    "ok": true,
+    "result": [
+      {
+        "id": "solve",
+        "label": "求解",
+        "available": true,
+        "preview": "x=-sqrt(2) or x=sqrt(2)",
+        "risk": "safe",
+        "engine": "sympy"
+      },
+      {
+        "id": "simplify",
+        "label": "化简",
+        "available": true,
+        "preview": "x^2=2",
+        "risk": "safe",
+        "engine": "sympy"
+      },
+      {
+        "id": "factor",
+        "label": "因式分解",
+        "available": true,
+        "preview": "x^2=2",
+        "risk": "safe",
+        "engine": "sympy"
+      },
+      {
+        "id": "expand",
+        "label": "展开",
+        "available": true,
+        "preview": "x^2=2",
+        "risk": "safe",
+        "engine": "sympy"
+      },
+      {
+        "id": "move_terms",
+        "label": "移项",
+        "available": true,
+        "preview": "x^2 - 2=0",
+        "risk": "safe",
+        "engine": "sympy"
+      },
+      {
+        "id": "square_both_sides",
+        "label": "两边平方",
+        "available": true,
+        "preview": "x^4=4",
+        "risk": "safe",
+        "engine": "sympy"
+      }
+    ],
+    "metrics": {
+      "durationMs": 0.006041998858563602,
+      "cacheHits": 0
+    }
+  },
+  "exact_probe": {
+    "ok": true,
+    "result": {
+      "value": "sqrt(2)",
+      "steps": [
+        {
+          "step": 0,
+          "defined": true,
+          "predicateResult": true,
+          "verificationStatus": "verified",
+          "verificationTarget": "predicate_at_assignment",
+          "leftValue": "2",
+          "rightValue": "2"
+        }
+      ],
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.0039590013329871,
+      "cacheHits": 0
+    }
+  },
+  "multiply_3": {
+    "ok": true,
+    "result": {
+      "applied": true,
+      "source": "3*x^2=6",
+      "engine": "sympy",
+      "reason": "SymPy 符号变换",
+      "certificate": {
+        "status": "cas_verified",
+        "claimedRelation": "equivalent",
+        "engine": "sympy"
+      }
+    },
+    "metrics": {
+      "durationMs": 0.0072500006353948265,
+      "cacheHits": 0
+    }
+  },
+  "divide_zero": {
+    "ok": false,
+    "error": {
+      "code": "CAS_INPUT",
+      "message": "不能除以零"
+    },
+    "verification": {
+      "status": "unknown",
+      "target": "executeTransformation",
+      "method": "sympy_worker",
+      "limitations": [
+        "CAS_INPUT"
+      ]
+    },
+    "metrics": {
+      "durationMs": 0.005041998520027846,
+      "cacheHits": 0
+    }
+  },
+  "unknown": {
+    "ok": true,
+    "result": {
+      "states": [
+        {
+          "source": "sin(x)=x",
+          "canonical": "sin(x) = x",
+          "latex": "\\sin{\\left(x \\right)} = x",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "unverified",
+          "verification": {
+            "status": "unknown",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "unverified",
+            "display": "ConditionSet(x, Eq(-x + sin(x), 0), Reals)",
+            "latex": "\\left\\{x\\; \\middle|\\; x \\in \\mathbb{R} \\wedge - x + \\sin{\\left(x \\right)} = 0 \\right\\}"
+          },
+          "domain": {
+            "kind": "all_real"
+          },
+          "reason": "SymPy 暂时无法求出完整解集"
+        }
+      ],
+      "relations": [],
+      "diagnostics": [
+        {
+          "status": "unverified",
+          "message": "SymPy 暂时无法求出完整解集",
+          "title": "SymPy 暂时无法求出完整解集"
+        }
+      ],
+      "breakpointStep": null,
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.0040000013541430235,
+      "cacheHits": 0
+    }
+  },
+  "syntax_error": {
+    "ok": true,
+    "result": {
+      "states": [
+        {
+          "source": "x=)",
+          "canonical": "",
+          "latex": "",
+          "variable": "x",
+          "engine": "sympy",
+          "trustLevel": "unverified",
+          "verification": {
+            "status": "unknown",
+            "target": "solution_completeness",
+            "method": "sympy_solution_set_and_domain",
+            "limitations": [
+              "single_variable_real_domain",
+              "trusted_CAS_result_not_independent_proof"
+            ]
+          },
+          "solutionSet": {
+            "kind": "expression"
+          },
+          "domain": {
+            "kind": "expression"
+          },
+          "reason": "缺少数字、变量或函数"
+        }
+      ],
+      "relations": [],
+      "diagnostics": [
+        {
+          "status": "unverified",
+          "message": "缺少数字、变量或函数",
+          "title": "缺少数字、变量或函数"
+        }
+      ],
+      "breakpointStep": null,
+      "engine": "sympy"
+    },
+    "metrics": {
+      "durationMs": 0.0035420016502030194,
+      "cacheHits": 0
+    }
+  },
+  "real_timeout": {
+    "ok": false,
+    "error": {
+      "code": "CAS_TIMEOUT",
+      "message": "SymPy 计算超时，请简化表达式。"
+    },
+    "verification": {
+      "status": "unknown",
+      "target": "runTrace",
+      "method": "sympy_worker",
+      "limitations": [
+        "CAS_TIMEOUT"
+      ]
+    },
+    "metrics": {
+      "durationMs": 0.0037089994293637574,
+      "cacheHits": 0
+    }
+  },
+  "writing_create": {
+    "ok": true,
+    "sessionId": "395901f535ee4aa6",
+    "result": {
+      "semanticDocument": {
+        "type": "Document",
+        "languageVersion": "0.3",
+        "children": [
+          {
+            "type": "Section",
+            "level": 1,
+            "title": "Initial document",
+            "sourceRange": {
+              "start": 0,
+              "end": 1
+            }
+          }
+        ],
+        "entities": {},
+        "diagnostics": []
+      },
+      "graph": {
+        "nodes": [],
+        "edges": [],
+        "cycles": [],
+        "topologicalOrder": []
+      },
+      "renderDocument": {
+        "kind": "document",
+        "renderId": "render:document",
+        "semanticId": null,
+        "sourceRange": null,
+        "renderHash": "sha256:47a4bab925e1bd385fb7d7188a0f905d10f8e8280dd22b77abcb46d5a0e6e293",
+        "children": [
+          {
+            "kind": "section",
+            "renderId": "render:section:c56489d02533",
+            "semanticId": null,
+            "sourceRange": {
+              "start": 0,
+              "end": 1
+            },
+            "renderHash": "sha256:05ec67ebf26af13841d636d4bbb897c8e3ef30720c92739a69f57f550903cf0c",
+            "children": [
+              {
+                "kind": "heading",
+                "renderId": "render:heading:3d2b7363acb5",
+                "semanticId": null,
+                "sourceRange": null,
+                "renderHash": "sha256:d8c8925962f7114d063017d257aa5f8a7a0a9b703230c83229baed61e6f7ac90"
+              }
+            ]
+          }
+        ]
+      },
+      "html": "<article class=\"xdlt-document\" data-xdlt-render-id=\"render:document\"><section class=\"xdlt-section\" data-xdlt-render-id=\"render:section:c56489d02533\" data-xdlt-source-start=\"0\" data-xdlt-source-end=\"1\"><h1>Initial document</h1></section></article>",
+      "diagnostics": [],
+      "assets": [],
+      "sourceMap": [
+        {
+          "renderId": "render:section:c56489d02533",
+          "semanticId": null,
+          "sourceRange": {
+            "start": 0,
+            "end": 1
+          }
+        }
+      ],
+      "renderDiagnostics": []
+    }
+  },
+  "writing_add_context": {
+    "ok": true,
+    "sessionId": "395901f535ee4aa6",
+    "result": {
+      "semanticDocument": {
+        "type": "Document",
+        "languageVersion": "0.3",
+        "children": [
+          {
+            "type": "Section",
+            "level": 1,
+            "title": "Updated document",
+            "sourceRange": {
+              "start": 0,
+              "end": 1
+            }
+          },
+          {
+            "type": "Context",
+            "kind": "context",
+            "id": null,
+            "namespace": "ctx.anon1",
+            "declarations": [
+              {
+                "names": [
+                  "x"
+                ],
+                "type": {
+                  "name": "Real"
+                },
+                "properties": [],
+                "line": 2,
+                "raw": "x: Real",
+                "value": null,
+                "valueText": null
+              }
+            ],
+            "contextDiagnostics": [],
+            "sourceRange": {
+              "start": 2,
+              "end": 5
+            },
+            "children": []
+          },
+          {
+            "type": "Assertion",
+            "kind": "assert",
+            "id": "assert:unknown",
+            "verifier": "sympy",
+            "claimSource": "x > 0",
+            "requirementSources": [],
+            "claim": {
+              "kind": "comparison",
+              "operator": ">",
+              "left": {
+                "kind": "symbol",
+                "name": "x",
+                "symbolId": "sym:ctx.anon1/x"
+              },
+              "right": {
+                "kind": "literal",
+                "valueType": "integer",
+                "value": "0"
+              }
+            },
+            "requirements": [],
+            "symbols": {
+              "x": {
+                "name": "x",
+                "symbolId": "sym:ctx.anon1/x",
+                "type": "Real",
+                "properties": [],
+                "line": 2,
+                "value": null,
+                "valueText": null
+              }
+            },
+            "verification": {
+              "status": "unverified",
+              "verifier": "sympy"
+            },
+            "sourceRange": {
+              "start": 5,
+              "end": 8
+            },
+            "children": []
+          }
+        ],
+        "entities": {
+          "assert:unknown": {
+            "type": "Assertion",
+            "id": "assert:unknown"
+          }
+        },
+        "diagnostics": []
+      },
+      "graph": {
+        "nodes": [
+          {
+            "id": "sym:ctx.anon1/x",
+            "kind": "symbol",
+            "semanticHash": "sha256:1022cfb75965df70e16425e2a4548359c5cb683cef9855bb7d1f947bbdf4b57b",
+            "state": "dirty",
+            "order": 0
+          },
+          {
+            "id": "context:ctx.anon1",
+            "kind": "context",
+            "semanticHash": "sha256:8d267ff4e583c96d8277534e0b83df6710233ea7b5c58908228ef3df6a81cab4",
+            "state": "dirty",
+            "order": 1
+          },
+          {
+            "id": "assert:unknown",
+            "kind": "assertion",
+            "semanticHash": "sha256:da2871263e29b4d5164bf6901148d4a1fc178d62f26e60eb1f625968527d32df",
+            "state": "dirty",
+            "order": 2
+          }
+        ],
+        "edges": [
+          {
+            "source": "context:ctx.anon1",
+            "target": "sym:ctx.anon1/x",
+            "type": "declares"
+          },
+          {
+            "source": "assert:unknown",
+            "target": "sym:ctx.anon1/x",
+            "type": "uses-symbol"
+          }
+        ],
+        "cycles": [],
+        "topologicalOrder": [
+          "context:ctx.anon1",
+          "sym:ctx.anon1/x",
+          "assert:unknown"
+        ]
+      },
+      "renderDocument": {
+        "kind": "document",
+        "renderId": "render:document",
+        "semanticId": null,
+        "sourceRange": null,
+        "renderHash": "sha256:e9c43fde1dee7bcde1f4e778a5fdce4f9cbcc824b63a33d307f7418f9d5acb5a",
+        "children": [
+          {
+            "kind": "section",
+            "renderId": "render:section:a7938b0f31a8",
+            "semanticId": null,
+            "sourceRange": {
+              "start": 0,
+              "end": 1
+            },
+            "renderHash": "sha256:96b0bda78b01fbfb7dfad6bdc6867876814011fc626f83a76e670aec718d589a",
+            "children": [
+              {
+                "kind": "heading",
+                "renderId": "render:heading:b80e6da4ea24",
+                "semanticId": null,
+                "sourceRange": null,
+                "renderHash": "sha256:942ee55668f911680040284a1bab901822bf937bdd98a6062b949695108bfc31"
+              },
+              {
+                "kind": "assertion",
+                "renderId": "assert:unknown",
+                "semanticId": "assert:unknown",
+                "sourceRange": {
+                  "start": 5,
+                  "end": 8
+                },
+                "renderHash": "sha256:f98f952fdcbaaea781a191188a6ad3fb987f84374ff940d3ca042271e64036e5"
+              }
+            ]
+          }
+        ]
+      },
+      "html": "<article class=\"xdlt-document\" data-xdlt-render-id=\"render:document\"><section class=\"xdlt-section\" data-xdlt-render-id=\"render:section:a7938b0f31a8\" data-xdlt-source-start=\"0\" data-xdlt-source-end=\"1\"><h1>Updated document</h1><section class=\"xdlt-assertion xdlt-assertion-unknown\" data-xdlt-id=\"assert:unknown\" data-xdlt-source-start=\"5\" data-xdlt-source-end=\"8\"><header class=\"xdlt-assertion-header\"><span class=\"xdlt-assertion-status\">status: unknown</span></header><div class=\"xdlt-assertion-claim\">x &gt; 0</div></section></section></article>",
+      "diagnostics": [],
+      "assets": [],
+      "sourceMap": [
+        {
+          "renderId": "render:section:a7938b0f31a8",
+          "semanticId": null,
+          "sourceRange": {
+            "start": 0,
+            "end": 1
+          }
+        },
+        {
+          "renderId": "assert:unknown",
+          "semanticId": "assert:unknown",
+          "sourceRange": {
+            "start": 5,
+            "end": 8
+          }
+        }
+      ],
+      "renderDiagnostics": [],
+      "patches": [
+        {
+          "op": "remove",
+          "renderId": "render:section:c56489d02533"
+        },
+        {
+          "op": "insert",
+          "parentRenderId": "render:document",
+          "index": 0
+        }
+      ],
+      "htmlPatches": [
+        {
+          "op": "remove",
+          "renderId": "render:section:c56489d02533",
+          "anchor": "xdlt-render-section-c56489d02533"
+        },
+        {
+          "op": "insert",
+          "parentRenderId": "render:document",
+          "parentAnchor": "xdlt-render-document",
+          "index": 0,
+          "html": "<section class=\"xdlt-section\" data-xdlt-render-id=\"render:section:a7938b0f31a8\" data-xdlt-source-start=\"0\" data-xdlt-source-end=\"1\"><h1>Updated document</h1><section class=\"xdlt-assertion xdlt-assertion-unknown\" data-xdlt-id=\"assert:unknown\" data-xdlt-source-start=\"5\" data-xdlt-source-end=\"8\"><header class=\"xdlt-assertion-header\"><span class=\"xdlt-assertion-status\">status: unknown</span></header><div class=\"xdlt-assertion-claim\">x &gt; 0</div></section></section>"
+        }
+      ],
+      "invalidatedSemanticIds": [
+        "sym:ctx.anon1/x",
+        "context:ctx.anon1",
+        "assert:unknown"
+      ],
+      "stats": {
+        "reusedVerification": 0,
+        "recomputedVerification": 1,
+        "reusedExecution": 0,
+        "recomputedExecution": 0,
+        "reusedParsing": false,
+        "patchFallback": false
+      }
+    }
+  },
+  "writing_destroy": {
+    "ok": true,
+    "result": {
+      "destroyed": true
+    }
+  },
+  "simulator_writing_readback": {
+    "ok": true,
+    "result": {
+      "source": "# CAS 自动编译验收\n\n$$ #eq:roots\nx^2=3\n$$\n\n#context {\nx: Real\n}\n#assert:unknown {\nclaim x > 0\n}\n#assert:error {\nclaim x = 0\n}\n\n# Save marker 4"
+    }
+  },
+  "writingSourceSHA256": "8c7d0b154cbb9daa9c84b64ccad93e649b5026dd7f0323d3355b0895ca77bfb1"
+}

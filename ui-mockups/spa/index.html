@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NeoMath · Notebook</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Desktop AOT shell: same-origin MathCore API (empty base = current host). -->
+    <script>
+      window.__NEOMATH_EMBEDDED__ = true;
+      window.__NEOMATH_CORE_URL__ = "";
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>

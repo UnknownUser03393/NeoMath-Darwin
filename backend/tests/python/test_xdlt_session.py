@@ -84,6 +84,21 @@ def test_identical_update_is_noop() -> None:
     assert result.recomputed_execution_count == 0
 
 
+def test_update_adds_context_symbols_to_plain_document() -> None:
+    session = CompilationSession("add-context")
+    session.compile("# Initial document\n")
+    updated = session.update(DOC)
+    fresh = CompilationSession("fresh-context").compile(DOC)
+    assert updated.html == fresh.html
+    assert updated.recomputed_verification_count == 1
+    assert updated.recomputed_execution_count == 1
+    assert "sym:ctx.anon1/alpha" in updated.invalidated_semantic_ids
+    # A subsequent edit must preserve the new context and its cached results.
+    second = session.update(DOC.replace("# 标题", "# Updated title"))
+    assert second.reused_verification_count == 1
+    assert second.reused_execution_count == 1
+
+
 # --- 2. paragraph text edit ------------------------------------------------
 
 

@@ -171,7 +171,13 @@ class CompilationSession:
                 for nid, node in previous.project.graph.nodes.items()
                 if node.kind == EXECUTABLE
             )
-        closure = invalidate_nodes(previous.project.graph, directly_affected)
+        # Newly declared symbols have no node in the previous graph. Their
+        # dependents are already compiled in new_state and included below;
+        # only existing nodes can seed the old graph's invalidation closure.
+        closure = invalidate_nodes(
+            previous.project.graph,
+            [node_id for node_id in directly_affected if node_id in previous.project.graph.nodes],
+        )
         invalidated = _changed_semantic_ids(previous, new_state)
         invalidated_ids = _ordered_union(
             closure, invalidated, new_state.project.graph

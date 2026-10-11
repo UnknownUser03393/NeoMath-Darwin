@@ -2,77 +2,191 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this is
+## Project overview
 
-A static React prototype of **NeoMath.Darwin**, a canvas-first math-reasoning app for iPad. It implements exactly one worked example — the *Lost roots* derivation (`x(x − 1) = 0` → `x − 1 = 0` → `x = 1`) — as a design fixture. There is no kernel, no persistence, and no network layer; every mathematically meaningful result is precomputed in `src/data.ts`.
+NeoMath is a math derivation debugger for students — C++20 MathCore + Python (pybind11) + React UI. It treats each line of math derivation as a runnable state: parse, compute domain/solution set, transform, verify. When adjacent steps are no longer equivalent, it produces a precise rational counterexample (Witness) instead of a red X.
 
-The authoritative design document is `NEOMATH_DARWIN_UI_SPEC.md` (Chinese, ~1200 lines). It is a *target* spec, not a report of what is built here — the prototype deliberately lags it. Spec section numbering is referenced by rule IDs in the code comments and in `AGENTS.md`. `Aizawa_Minato_refined.txt` is an unrelated roleplay prompt, not project material.
+The second subsystem is XDLT (`.hw` language): a semantic math-writing language with an incremental compiler (`parser → semantic → graph → verify → render → exec → cards → session`).
 
-## Repo state — read before running anything
+**Hard constraint**: C++ is the sole source of math truth. Python orchestrates; the UI renders C++ results and never duplicates solving logic. AI (OpenAI-compatible client, default provider DashScope Qwen) may only rephrase explanations and generate transformation candidates — it never modifies MathState directly.
 
-- **`index.html` and `.figma/make/site.json` do not exist.** `vite.config.ts` imports the latter directly at line 6, so Vite will not start until it is created. There is also no `package-lock.json` and no `node_modules` yet.
-- `src/` was extracted from `src (1).zip`, which is still in the repo root; the two are byte-identical as of the extraction, so treat the zip as a stale duplicate rather than a second source of truth.
-- `AGENTS.md` describes the Figma Make environment where the missing files are normally supplied and a dev server is already running on `$PORT` (default 8443) — neither holds in this checkout.
+## Build, test, lint commands
 
-## Commands
+All commands assume Windows 10/11 x64 with VS C++ Build Tools. The project has three independent layers.
+
+### C++ MathCore (`desktop/cpp/`)
+
+Configure, build, and test via CMake from `desktop/`:
+
+```bat
+cmake -S . -B build/verify --fresh -G Ninja -DCMAKE_BUILD_TYPE=Release -DNEOMATH_BUILD_TESTS=ON
+cmake --build build/verify --parallel
+ctest --test-dir build/verify --output-on-failure
+```
+
+C++ tests use Catch2 (vendored single-header in `cpp/third_party/catch2/`). 12 test cases covering rational arithmetic, parsing, polynomials, demo traces, transforms, solver, limits, and replay.
+
+### Python (`desktop/`)
+
+First-time setup:
+
+```bat
+cd desktop
+bootstrap.bat          # creates .venv, pip install -e ".[dev]" (builds neomath_core.pyd)
+```
+
+Run the app:
+
+```bat
+run.bat                                             # GUI via pywebview
+python run.py --demo lost-root --headless            # headless demo
+python -m neomath --serve                            # HTTP API server on 127.0.0.1:8765
+python -m neomath --ui notebook                      # notebook UI
+```
+
+Run tests:
+
+```bat
+python -m pytest -q                                  # all 258 tests
+python -m pytest tests/python/test_xdlt_parser.py -q # single file
+python -m pytest tests/python/test_xdlt_parser.py::TestName -q  # single test
+python -m pytest tests/golden -q                     # golden solution-set tests (14 cases)
+```
+
+Lint and type-check:
+
+```bat
+python -m ruff check src tests tools scripts
+python -m mypy src/neomath
+```
+
+Differential validation (10,000 SymPy oracle comparisons):
+
+```bat
+python tools/differential/run_differential.py --cases 10000 --seed 20260724
+```
+
+Benchmarks:
+
+```bat
+python tools/benchmark/run_benchmarks.py
+```
+
+Full verification pipeline (C++ format → build → ctest → extension build → pytest → golden → differential → benchmark → ruff → mypy → secret scan → release build):
+
+```bat
+scripts\verify_all.bat
+```
+
+### React UI (`ui-mockups/`)
+
+Requires Node >= 22.13.
 
 ```bash
-npm install
-npm run dev        # vite, port 8443 (overridable with PORT)
-npm run build      # vite build
-npm run preview
-npm run format     # oxfmt
-npx tsc --noEmit   # type check — there is no script, test runner, or linter
+npm ci                   # install deps (pnpm-lock.yaml also present)
+npm run build:spa        # AOT build into ../desktop/src/neomath/ui/notebook/
+npm run dev:spa          # dev server on :5174, proxies /api → 127.0.0.1:8765
+npm run lint             # ESLint
+npm test                 # node:test (24 tests: sessions, patches, HTML, sidebar)
 ```
+
+For dev with hot reload: start `python -m neomath --serve` in one terminal, `npm run dev:spa` in another.
 
 ## Architecture
 
-`src/main.tsx` → `src/App.tsx`, which owns all state and switches between two screens: `Documents` (document list) and the document workspace. There is no router, no context, and no state library — everything is `useState` in `App` and passed down as props.
+### Three-layer stack (strict responsibility discipline)
 
 ```
-App.tsx          session state: screen, view('canvas'|'steps'), selection, inspector
-                 open/pinned, tool, zoom, grid, theme mode. Derives strongStep /
-                 weakStep / selectedRel from the selection and hands them down.
-data.ts          domain model + mock kernel. Exact rational arithmetic (Fr,
-                 gcd-normalized), parseRational, steps[] each carrying an
-                 evaluate(x) -> {left, right, holds}, relations, stateMeta.
-ui.tsx           shared primitives: M (math text), Glyph, StatusLine, Chip,
-                 toneText / toneTint maps.
-CanvasView.tsx   spatial view: rows at fixed ROW=112 pitch, relation connectors,
-                 and an SVG ink-stroke layer driven by pointer events.
-StepsView.tsx    linear list view of the same steps.
-Inspector.tsx    right panel, tabs Overview / Evidence / Details. Hosts the
-                 Witness (automatic counterexample, with substitution), Probe
-                 (manual `x` entry), and Review (repair options) pieces.
+React UI (ui-mockups/)  ←  AOT SPA, render-only, no math logic
+    │  HTTP 127.0.0.1:8765 (/api/*)
+Python (desktop/src/neomath/)  ←  orchestration, persistence, XDLT compiler, AI facade
+    │  pybind11 (CoreMathRuntime releases GIL during compute)
+C++ MathCore (desktop/cpp/)  ←  sole source of math truth
 ```
 
-Data flow is one-directional: `data.ts` is the only source of truth, `App` holds selection, and leaf views are pure props renderers. `CanvasView` is the sole exception — it owns its ink strokes locally, since they are not part of the document model yet.
+### C++ MathCore (`desktop/cpp/`)
 
-### Coupling points to know
+Four source modules, all under `include/neomath/` and `src/`:
 
-- **Relation IDs are encoded arithmetically.** `RelId` is the literal union `12 | 23`, and the step→relation map is derived three separate ways: `relOfStep()` in `App.tsx`, an inline `((n - 1) * 10 + n) as RelId` in `StepsView.tsx`, and a hardcoded `[12, 23]` in `CanvasView.tsx`. Any change to step count or ordering must update all three.
-- **Steps are 1-based in the UI, 0-based in the arrays** (`steps[rel.from - 1]`).
-- `M` renders math text in `--font-math` and italicizes the variable by splitting the string on the literal `x`. Math strings written outside `M` will not get this treatment.
-- `steps[].src` holds display strings with typographic characters (U+2212 minus), while `parseRational` normalizes `−`/`–` back to ASCII before parsing.
+| Module | Header | Responsibility |
+|---|---|---|
+| `exact/rational` | `rational.hpp` | `Rational` (int64, checked, denominator > 0, 0 = 0/1); `pow`, `exactSquareRoot` |
+| `syntax/ast` | `ast.hpp` | Immutable `std::variant` AST (`Expression`), `Predicate`, `ParseError`, `ExecutionLimits` |
+| `syntax/parser` | — | Recursive-descent parser with implicit multiplication and `sqrt(...)` |
+| `algebra/polynomial` | `polynomial.hpp` | Sparse exact-coefficient `Polynomial`, `RationalFunction`, `rationalRoots` (degree ≤ 2) |
+| `semantics/engine` | `engine.hpp` | `MathState`, `ExecutionTrace`, `SolutionSet`, `DomainSet`; trace, replay, probe, transforms |
 
-## The one hard product rule
+The `bindings/` directory is pure glue: `module.cpp` (PYBIND11_MODULE), `api.cpp` (8 exported functions with GIL release + timing + trace cache), `converters.cpp` (C++ → Python dict marshalling), `exception_translation.cpp`.
 
-Spec rule UX-04 ("状态诚实" — honest state) is enforced throughout, and it is the constraint most likely to be violated by a well-meaning change: **nothing may present demo data as a verified result.** Every kernel-dependent control is `disabled` with a `title` explaining why, the header carries a "Demo data" chip, `stateMeta` distinguishes `initial` / `lostSolution` / `tainted` rather than showing a success state, and `Probe` labels itself "Manual probe · does not replace the automatic witness". Do not wire these up to mock successes, and do not add green/equivalent styling that the fixture data doesn't support.
+The 8 exported API methods: `parse_document`, `analyze_document`, `run_trace`, `replay`, `get_completions`, `execute_transformation`, `evaluate_probe`, `get_capabilities`.
 
-## Styling
+### Python layer (`desktop/src/neomath/`)
 
-Tailwind CSS v4 via `@tailwindcss/vite` — **no `tailwind.config.js` and no PostCSS config**, by design. All design tokens live in `src/index.css`:
+Key modules at the top level:
 
-- Raw values are CSS custom properties on `:root`, overridden under `[data-theme='dark']`.
-- `@theme inline` maps them to utility names (`--color-canvas` → `bg-canvas`, `--color-ink2` → `text-ink2`, `--color-ok|warn|bad|none`, `--font-math`). To add a color, add it in *both* places.
-- Theming is applied by setting `document.documentElement.dataset.theme`; `App` cycles system → light → dark and follows `prefers-color-scheme`. `Documents.tsx` receives the mode as props instead of reading it.
-- Status tints use `color-mix` against `--status-blend` (`.tint-*` classes); `CanvasView` uses `var(--accent-foreground)` inline where a Tailwind class isn't enough.
-- Motion durations are tokens (`--m-press`, `--m-content`, `--m-panel`) that collapse under `prefers-reduced-motion`. Spec §12.3 catalogues the intended animations as M01–M20; the prototype implements only the press/panel/content subset.
+- `bridge.py` — `NeoMathCoreClient`: the **only** module allowed to import `neomath_core`. Facade over all 8 C++ API methods.
+- `server.py` — `ThreadingHTTPServer` on `127.0.0.1:8765`, `POST /api/<method>` for each `EXPOSED_METHODS` entry + `GET /api/health`. Serves AOT static UI from `ui/notebook/`.
+- `app.py` — `NeoMathApplication`: pywebview lifecycle, multiprocessing, headless mode, demo selection.
+- `notebook_workspace.py`, `xdlt_workspace.py` — workspace managers for the two UI tabs.
 
-## Responsive tiers
+Subpackages:
 
-`App` measures `window.innerWidth` and picks `wide ≥ 1180`, `regular ≥ 900`, `narrow ≥ 600`, `compact < 600`. This drives inspector placement, not just sizing: docked side panel on wide/regular, a bottom drawer (72px collapsed → 45dvh expanded) on narrow, and a full-width replacement panel on compact. The spec is explicit that layout follows available window space, not device model. `⇧⌘I` toggles the inspector.
+- `ai/` — OpenAI-compatible client (`openai_client.py`), fallback templates, schemas. AI only touches explanation text and transformation **candidates**.
+- `edlatex/` — Document model, context/scoping, derivation rules/graph, multi-backend render (HTML/LaTeX/JSON).
+- `xdlt/` — The `.hw` compiler pipeline:
+  - `math/` — lexer, parser, AST, semantic lower for math sub-language
+  - `parser.py`, `semantic.py`, `resolve.py` — top-level `.hw` parsing and reference resolution
+  - `graph/` — dependency graph with node-level hashing and incremental invalidation
+  - `verification/` — SymPy-based assertion verification (four states: valid / valid-with-conditions / invalid / unknown)
+  - `execution/` — Python runner with result caching and provenance
+  - `cards/` — Knowledge card registry, binding, conditions
+  - `render/` — HTML build, numbering, diagnostics, incremental diff/patch
+  - `session/` — `CompilationSession`: edit → incremental recompile → patch-level HTML diff
+  - `sel/` — Structured Expression Language for assertions and value environment
+  - `values/` — Value environment, conversion, resolution
 
-## Code quality
+### React UI (`ui-mockups/`)
 
-From `AGENTS.md`: use double quotes for strings containing apostrophes (an unescaped apostrophe in a single-quoted string breaks the build), keep JSX tags closed and braces balanced, and export components as default exports.
+Two entry points sharing the same `components/` and `lib/`:
+
+1. **SPA** (`spa/`) — AOT build target. `spa/index.html` sets `__NEOMATH_EMBEDDED__` and `__NEOMATH_CORE_URL__=""` so the UI talks to same-origin Python server.
+2. **Next.js** (`app/`) — Full-stack path (vinext adapter, Cloudflare Workers).
+
+Key directories:
+
+- `components/notebook/` — `NotebookCanvas`, `NotebookCell`, `MathCell`, `MathCellEditor`, `CompletionBar`, `TransformPalette`
+- `components/xdlt/` — `XdltWorkspace`, `XdltDebugPanel`
+- `components/outputs/` — `DiagnosticOutput`, `EquivalenceOutput`, `MathOutput`, `WitnessOutput`
+- `lib/runtime/` — `CoreMathRuntime.ts` (HTTP bridge), `MockMathRuntime.ts` (offline demo fallback), `FallbackMathRuntime` (auto-detects backend availability)
+- `lib/xdlt/` — `bridge.ts` (XDLT session HTTP client), `session.ts`, `patchRuntime.ts`
+
+The runtime bridge detects backend availability via `GET /api/health`. When the Python backend is unreachable, it falls back to `MockMathRuntime` so the four built-in demos still work.
+
+### Data flow for a notebook run
+
+1. UI calls `POST /api/runTrace` with document text
+2. Python `NeoMathCoreClient.run_trace()` calls C++ `run_trace` via pybind11 (GIL released)
+3. C++ returns `ExecutionTrace` (per-step `MathState` with solution sets, domains, diagnostics)
+4. Python converts to JSON response
+5. UI renders `MathOutput`, `EquivalenceOutput`, `DiagnosticOutput`, `WitnessOutput` per cell
+
+Replay: UI sends changed step index + updated text → C++ reuses cached states for unchanged prefix (`cacheHits`), re-computes only affected suffix.
+
+## Key invariants (enforced in C++, not convention)
+
+- Rational numbers: denominator always positive, auto-reduced, zero = `0/1`; all operations checked for overflow
+- No floating-point in equivalence/root/solution-set decisions
+- Equation state carries both domain and solution set; canceling denominators does not silently restore excluded points
+- Adjacent steps are equivalent only when both solution set AND domain match; conditional equivalence is annotated separately
+- First provable divergence is Root Fault; dependent steps are Tainted
+- Probe/Witness values are exact rationals from solution-set or domain-set differences
+- Scope: single-variable real algebra, degree ≤ 2, rational coefficients. Beyond capability → `Unverified` (never faked)
+
+## Tests by layer
+
+| Layer | Framework | Count | Key files |
+|---|---|---|---|
+| C++ | Catch2 | 12 cases | `cpp/tests/core_tests.cpp` |
+| Python unit | pytest | 258 tests | `tests/python/` (16 files), `tests/golden/`, `tests/integration/` |
+| Python diff | custom | 10,000 cases | `tools/differential/run_differential.py` |
+| UI | node:test | 24 tests | `ui-mockups/tests/*.test.mjs` |

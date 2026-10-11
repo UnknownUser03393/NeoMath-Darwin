@@ -1,0 +1,22 @@
+NeoMath SwiftPM compatibility probe
+
+Verified on this Mac with Xcode 16.4 / Apple Swift 6.1.2:
+- Original Objective-C++ bridge and C++20 MathCore build as a Swift Package.
+- Native Swift executable returns {0, 1}, root_fault and witness 0.
+- .swiftpm App Playground is recognized by Xcode.
+- iOS Simulator Debug build succeeds.
+- iOS device Release build succeeds with CODE_SIGNING_ALLOWED=NO (not a signed installation).
+- Actual iPad iOS 18.6 Simulator button interaction returns solutions {0, 1}, lost root 0, before True / after False.
+- Nested local package is included so the app does not reference the original workspace.
+
+NOT VERIFIED:
+- Swift Playgrounds on Mac or iPad: neither is installed.
+- Swift Playgrounds support for the Clang/Objective-C++ dependency.
+- Full NeoMath UI, SwiftMath, resources, Writing, backend and persistence migration.
+
+To test the remaining requirement:
+1. Install Apple's Swift Playgrounds from the App Store.
+2. Extract this archive and open NeoMathProbe.swiftpm with Swift Playgrounds.
+3. Build/run, tap Run lost-root check.
+4. Expected output: C++20, solutions {0, 1}, root_fault, witness 0, before True / after False.
+5. If dependency resolution/build fails, preserve the exact error. Xcode success alone does not prove Playgrounds compatibility.

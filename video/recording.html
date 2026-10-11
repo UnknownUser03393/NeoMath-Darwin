@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-reduced-motion="false">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920">
+<title>NeoMath Recording Canvas</title>
+<style>
+/* =====================================================
+   RESET & CANVAS SETUP
+   ===================================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:        #0f0f0f;
+  --bg-card:   #181818;
+  --bg-hover:  #222222;
+  --text:      #e8e8e8;
+  --text-dim:  #999999;
+  --text-muted:#666666;
+  --accent:    #4c8dff;
+  --fault:     #d94848;
+  --success:   #3ea362;
+  --warn:      #c9972e;
+  --border:    #2a2a2a;
+  --ease:      cubic-bezier(0.22, 1, 0.36, 1);
+  --duration:  420ms;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Stage: fixed 1920x1080 ratio, centered and scaled */
+#stage {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* =====================================================
+   SCENE CONTAINER
+   ===================================================== */
+.scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px;
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+
+.scene.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* =====================================================
+   ANIMATED ELEMENTS
+   ===================================================== */
+.anim-el {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.anim-el.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+html[data-reduced-motion="true"] .anim-el {
+  transition: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* =====================================================
+   TYPOGRAPHY
+   ===================================================== */
+.t-hero {
+  font-size: 88px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1.08;
+  color: var(--text);
+}
+
+.t-subtitle {
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.t-tagline {
+  font-size: 52px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.t-body {
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.t-label {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.t-mono {
+  font-family: "SF Mono", "Cascadia Code", "Consolas", "Menlo", monospace;
+}
+
+.t-math {
+  font-family: "Cambria Math", "Latin Modern Math", "STIX Two Math", "Times New Roman", serif;
+  font-style: italic;
+}
+
+/* =====================================================
+   UTILITY
+   ===================================================== */
+.gap-12 { gap: 12px; }
+.gap-20 { gap: 20px; }
+.gap-28 { gap: 28px; }
+.gap-40 { gap: 40px; }
+.gap-56 { gap: 56px; }
+.mt-20 { margin-top: 20px; }
+.mt-40 { margin-top: 40px; }
+.mt-60 { margin-top: 60px; }
+.flex-col { display: flex; flex-direction: column; align-items: center; }
+.flex-row { display: flex; flex-direction: row; align-items: center; }
+.text-center { text-align: center; }
+.accent { color: var(--accent); }
+.fault { color: var(--fault); }
+.success { color: var(--success); }
+.warn { color: var(--warn); }
+
+.divider {
+  width: 64px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+/* =====================================================
+   SCENE: HOOK
+   ===================================================== */
+#scene-hook .hook-title {
+  text-align: center;
+}
+
+#scene-hook .hook-question {
+  font-size: 44px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* =====================================================
+   SCENE: PROBLEM
+   ===================================================== */
+.math-derivation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.math-eq {
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.math-arrow {
+  font-size: 28px;
+  color: var(--text-muted);
+}
+
+.math-operation-label {
+  font-size: 26px;
+  color: var(--warn);
+  font-weight: 500;
+}
+
+.set-comparison {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  margin-top: 32px;
+}
+
+.set-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.set-box .set-label {
+  font-size: 22px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.set-box .set-values {
+  font-size: 42px;
+  font-weight: 600;
+}
+
+.set-arrow {
+  font-size: 36px;
+  color: var(--text-muted);
+}
+
+.lost-indicator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 16px 28px;
+  border: 1px solid rgba(217, 72, 72, 0.3);
+  border-radius: 8px;
+  background: rgba(217, 72, 72, 0.06);
+}
+
+.lost-badge {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--fault);
+  padding: 4px 14px;
+  border: 1px solid var(--fault);
+  border-radius: 4px;
+}
+
+.verification-row {
+  display: flex;
+  gap: 48px;
+  margin-top: 24px;
+}
+
+.verification-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 30px;
+}
+
+.check-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.check-icon.pass { background: var(--success); }
+.check-icon.fail { background: var(--fault); }
+
+/* =====================================================
+   SCENE: WORKFLOW
+   ===================================================== */
+.workflow-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 28px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.workflow-step .step-name {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.workflow-step .step-desc {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.workflow-step.highlight {
+  background: rgba(76, 141, 255, 0.08);
+  border: 1px solid rgba(76, 141, 255, 0.25);
+}
+
+.workflow-step.highlight .step-name {
+  color: var(--accent);
+}
+
+.workflow-connector {
+  width: 40px;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   SCENE: TRUST MODEL
+   ===================================================== */
+.trust-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 900px;
+}
+
+.trust-header {
+  font-size: 64px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.trust-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.trust-box {
+  padding: 28px 48px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-align: center;
+}
+
+.trust-box .box-title {
+  font-size: 30px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.trust-box .box-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trust-box .box-item {
+  font-size: 24px;
+  color: var(--text-dim);
+}
+
+.trust-boundary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 32px;
+  margin: 24px 0;
+}
+
+.trust-boundary-line {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.trust-boundary-label {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.trust-arrow {
+  font-size: 28px;
+  color: var(--text-muted);
+  margin: 8px 0;
+}
+
+.trust-verdict {
+  font-size: 26px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 36px;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   SCENE: ENGINEERING
+   ===================================================== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.metric-card {
+  padding: 32px 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.metric-value {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.metric-unit {
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 8px;
+}
+
+.metric-label {
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* =====================================================
+   SCENE: AI COLLABORATION
+   ===================================================== */
+.collab-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 40px;
+}
+
+.collab-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.collab-node .node-name {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.collab-connector {
+  width: 36px;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.collab-actors {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  font-size: 36px;
+  font-weight: 600;
+}
+
+.collab-plus {
+  font-size: 28px;
+  color: var(--text-muted);
+}
+
+/* =====================================================
+   SCENE: REFLECTION
+   ===================================================== */
+.reflection-quote {
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1.55;
+  text-align: center;
+  max-width: 1100px;
+  color: var(--text);
+}
+
+.reflection-note {
+  font-size: 30px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 900px;
+}
+
+/* =====================================================
+   SCENE: END
+   ===================================================== */
+.end-credit {
+  font-size: 24px;
+  color: var(--text-muted);
+  margin-top: 48px;
+}
+
+/* =====================================================
+   DEBUG OVERLAY
+   ===================================================== */
+.debug-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.debug-overlay.visible {
+  display: block;
+}
+
+.debug-info {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 8px 14px;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--accent);
+  font-family: monospace;
+  line-height: 1.6;
+}
+
+.debug-safe-area {
+  position: absolute;
+  inset: 80px;
+  border: 1px dashed rgba(76,141,255,0.25);
+  pointer-events: none;
+}
+
+.debug-safe-area::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  height: 1px;
+  border-top: 1px dashed rgba(217,72,72,0.3);
+}
+
+.debug-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(76,141,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(76,141,255,0.04) 1px, transparent 1px);
+  background-size: 120px 120px;
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ==================== SCENE: HOOK ==================== -->
+  <section class="scene" id="scene-hook" data-scene="hook" data-steps="2">
+    <div class="flex-col gap-28 hook-title">
+      <div class="anim-el" data-step="0" data-demo-id="hook-title">
+        <div class="t-hero">NeoMath</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="120" data-demo-id="hook-subtitle">
+        <div class="t-subtitle">The Debugger for Mathematics</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="300">
+        <div class="divider" style="margin: 12px auto;"></div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="450" data-demo-id="hook-tagline">
+        <div class="t-body text-center" style="font-size: 34px; line-height: 1.55;">
+          把数学当程序运行，<br>把错误当 Bug 调试。
+        </div>
+      </div>
+    </div>
+    <div class="anim-el mt-60" data-step="1" data-demo-id="hook-question">
+      <div class="hook-question">
+        答案错了，究竟是从哪一步开始错的？
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: PROBLEM ==================== -->
+  <section class="scene" id="scene-problem" data-scene="problem" data-steps="4">
+    <div class="math-derivation">
+      <!-- Step 0: Show the equation -->
+      <div class="anim-el" data-step="0" data-demo-id="problem-original-equation">
+        <div class="math-eq t-math">x(x − 1) = 0</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="200">
+        <div class="math-arrow">↓</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="300">
+        <div class="math-operation-label">两边除以 x</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="400">
+        <div class="math-arrow">↓</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="500" data-demo-id="problem-transformed-equation">
+        <div class="math-eq t-math">x − 1 = 0</div>
+      </div>
+
+      <!-- Step 1: Show solution set diff -->
+      <div class="anim-el" data-step="1" data-demo-id="problem-set-diff">
+        <div class="set-comparison">
+          <div class="set-box">
+            <span class="set-label">此前解集</span>
+            <span class="set-values t-mono">{0, 1}</span>
+          </div>
+          <div class="set-arrow">→</div>
+          <div class="set-box">
+            <span class="set-label">此后解集</span>
+            <span class="set-values t-mono">{1}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Lost root indicator -->
+      <div class="anim-el" data-step="2" data-demo-id="problem-lost-root">
+        <div class="lost-indicator">
+          <span class="lost-badge">LOST ROOT</span>
+          <span class="t-body" style="font-size: 30px;">
+            <span class="t-math" style="font-size: 34px;">x = 0</span>
+            <span class="fault" style="margin-left: 16px;">在变形中丢失</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Step 3: Verification -->
+      <div class="anim-el" data-step="3" data-demo-id="problem-verification">
+        <div class="flex-col gap-12">
+          <div class="t-label" style="margin-bottom: 8px;">Witness: <span class="t-mono accent">x = 0</span></div>
+          <div class="verification-row">
+            <div class="verification-item">
+              <span class="check-icon pass">✓</span>
+              <span>原式&ensp;<span class="t-math">0(0 − 1) = 0</span></span>
+              <span class="success" style="margin-left: 8px;">成立</span>
+            </div>
+            <div class="verification-item">
+              <span class="check-icon fail">✕</span>
+              <span>新式&ensp;<span class="t-math">0 − 1 = 0</span></span>
+              <span class="fault" style="margin-left: 8px;">不成立</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: WORKFLOW ==================== -->
+  <section class="scene" id="scene-workflow" data-scene="workflow" data-steps="4">
+    <div class="anim-el" data-step="0" data-demo-id="workflow-title">
+      <div class="t-tagline text-center" style="margin-bottom: 56px;">调试循环</div>
+    </div>
+    <div class="workflow-pipeline" data-demo-id="workflow-pipeline">
+      <div class="workflow-step anim-el" data-step="0" data-demo-id="workflow-write">
+        <span class="step-name">Write</span>
+        <span class="step-desc">写推导</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="0" data-delay="80"></div>
+      <div class="workflow-step anim-el" data-step="0" data-delay="100" data-demo-id="workflow-complete">
+        <span class="step-name">Complete</span>
+        <span class="step-desc">语义补全</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="1" data-delay="0"></div>
+      <div class="workflow-step anim-el" data-step="1" data-delay="50" data-demo-id="workflow-run">
+        <span class="step-name">Run</span>
+        <span class="step-desc">运行</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="2" data-delay="0"></div>
+      <div class="workflow-step anim-el highlight" data-step="2" data-delay="50" data-demo-id="workflow-break">
+        <span class="step-name">Break</span>
+        <span class="step-desc">在错误处中断</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="3" data-delay="0"></div>
+      <div class="workflow-step anim-el" data-step="3" data-delay="50" data-demo-id="workflow-explain">
+        <span class="step-name">Explain</span>
+        <span class="step-desc">解释原因</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="3" data-delay="100"></div>
+      <div class="workflow-step anim-el" data-step="3" data-delay="150" data-demo-id="workflow-fix">
+        <span class="step-name">Fix</span>
+        <span class="step-desc">修复</span>
+      </div>
+      <div class="workflow-connector anim-el" data-step="3" data-delay="200"></div>
+      <div class="workflow-step anim-el" data-step="3" data-delay="250" data-demo-id="workflow-replay">
+        <span class="step-name">Replay</span>
+        <span class="step-desc">增量回放</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: TRUST MODEL ==================== -->
+  <section class="scene" id="scene-trust-model" data-scene="trust-model" data-steps="3">
+    <div class="trust-layout">
+      <div class="anim-el" data-step="0" data-demo-id="trust-headline">
+        <div class="trust-header">AI <span class="fault">≠</span> Math Truth</div>
+      </div>
+
+      <div class="anim-el" data-step="1" data-demo-id="trust-ai-box">
+        <div class="trust-column">
+          <div class="trust-box">
+            <div class="box-title">AI</div>
+            <div class="box-items">
+              <div class="box-item">学生语言解释</div>
+              <div class="box-item">Natural Language → Intent</div>
+            </div>
+          </div>
+          <div class="trust-arrow">↓</div>
+        </div>
+      </div>
+
+      <div class="anim-el" data-step="2" data-demo-id="trust-validation-boundary">
+        <div class="trust-boundary" style="width: 500px;">
+          <div class="trust-boundary-line"></div>
+          <div class="trust-boundary-label">VALIDATION BOUNDARY</div>
+          <div class="trust-boundary-line"></div>
+        </div>
+      </div>
+
+      <div class="anim-el" data-step="2" data-delay="200" data-demo-id="trust-core-box">
+        <div class="trust-column">
+          <div class="trust-arrow">↓</div>
+          <div class="trust-box" style="border-color: rgba(76,141,255,0.3);">
+            <div class="box-title accent">C++ MathCore</div>
+            <div class="box-items">
+              <div class="box-item">Parse · Domain · Solution Set</div>
+              <div class="box-item">Witness · Certificate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="anim-el" data-step="2" data-delay="500" data-demo-id="trust-verdict">
+        <div class="trust-verdict">
+          所有数学结论必须经过确定性内核验证。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: ENGINEERING ==================== -->
+  <section class="scene" id="scene-engineering" data-scene="engineering" data-steps="2">
+    <div class="anim-el" data-step="0" data-demo-id="engineering-title">
+      <div class="t-tagline text-center" style="margin-bottom: 48px;">工程验证</div>
+    </div>
+    <div class="metrics-grid" data-demo-id="engineering-metrics">
+      <div class="metric-card anim-el" data-step="1" data-delay="0" data-demo-id="engineering-tests">
+        <div class="metric-value t-mono">258<span class="metric-unit">tests passed</span></div>
+        <div class="metric-label">Python 单元测试 + 金标准用例</div>
+      </div>
+      <div class="metric-card anim-el" data-step="1" data-delay="120" data-demo-id="engineering-differential">
+        <div class="metric-value t-mono">10,000<span class="metric-unit">cases</span></div>
+        <div class="metric-label">SymPy Differential · 0 differences</div>
+      </div>
+      <div class="metric-card anim-el" data-step="1" data-delay="240" data-demo-id="engineering-latency">
+        <div class="metric-value t-mono">2.82<span class="metric-unit">ms P95</span></div>
+        <div class="metric-label">200-step Trace 端到端延迟</div>
+      </div>
+      <div class="metric-card anim-el" data-step="1" data-delay="360" data-demo-id="engineering-replay">
+        <div class="metric-value t-mono">199<span class="metric-unit">states reused</span></div>
+        <div class="metric-label">Incremental Replay · 200 步中仅重算 1 步</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: AI COLLABORATION ==================== -->
+  <section class="scene" id="scene-ai-collaboration" data-scene="ai-collaboration" data-steps="2">
+    <div class="anim-el" data-step="0" data-demo-id="collab-title">
+      <div class="t-tagline text-center" style="margin-bottom: 48px;">AI 协作过程</div>
+    </div>
+    <div class="anim-el" data-step="0" data-delay="200" data-demo-id="collab-actors">
+      <div class="collab-actors">
+        <span>Human</span>
+        <span class="collab-plus">+</span>
+        <span class="accent">AI Coding Agent</span>
+        <span class="collab-plus">+</span>
+        <span>Tests</span>
+        <span class="collab-plus">+</span>
+        <span>Iteration</span>
+      </div>
+    </div>
+    <div class="anim-el" data-step="1" data-demo-id="collab-flow">
+      <div class="collab-flow" style="margin-top: 56px;">
+        <div class="collab-node">
+          <span class="node-name">Idea</span>
+        </div>
+        <div class="collab-connector"></div>
+        <div class="collab-node">
+          <span class="node-name accent">Agent</span>
+        </div>
+        <div class="collab-connector"></div>
+        <div class="collab-node">
+          <span class="node-name">Code</span>
+        </div>
+        <div class="collab-connector"></div>
+        <div class="collab-node">
+          <span class="node-name">Test</span>
+        </div>
+        <div class="collab-connector"></div>
+        <div class="collab-node">
+          <span class="node-name">Inspect</span>
+        </div>
+        <div class="collab-connector"></div>
+        <div class="collab-node">
+          <span class="node-name">Iterate</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: REFLECTION ==================== -->
+  <section class="scene" id="scene-reflection" data-scene="reflection" data-steps="2">
+    <div class="anim-el" data-step="0" data-demo-id="reflection-quote">
+      <div class="reflection-quote">
+        AI 可以生成代码，<br>
+        但可靠性仍然需要边界、验证和测试。
+      </div>
+    </div>
+    <div class="anim-el mt-60" data-step="1" data-demo-id="reflection-unverified">
+      <div class="reflection-note">
+        不能证明的内容，<br>
+        就返回 <span class="t-mono accent">Unverified</span>。
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE: END ==================== -->
+  <section class="scene" id="scene-end" data-scene="end" data-steps="1">
+    <div class="flex-col gap-28">
+      <div class="anim-el" data-step="0" data-demo-id="end-title">
+        <div class="t-hero text-center">NeoMath</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="120" data-demo-id="end-subtitle">
+        <div class="t-subtitle text-center">The Debugger for Mathematics</div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="300">
+        <div class="divider" style="margin: 8px auto;"></div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="420" data-demo-id="end-tagline">
+        <div class="t-body text-center" style="font-size: 34px; line-height: 1.55;">
+          把数学当程序运行，<br>把错误当 Bug 调试。
+        </div>
+      </div>
+      <div class="anim-el" data-step="0" data-delay="600" data-demo-id="end-credit">
+        <div class="end-credit text-center">于东海 · 南京外国语学校 · 初一</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== DEBUG OVERLAY ==================== -->
+  <div class="debug-overlay" id="debug-overlay">
+    <div class="debug-grid"></div>
+    <div class="debug-safe-area"></div>
+    <div class="debug-info" id="debug-info"></div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================
+   NeoMath Recording — Scene System
+   ===================================================== */
+(function () {
+  'use strict';
+
+  const SCENES = [
+    'hook',
+    'problem',
+    'workflow',
+    'trust-model',
+    'engineering',
+    'ai-collaboration',
+    'reflection',
+    'end',
+  ];
+
+  let currentScene = null;
+  let currentStep = -1;
+  let animating = false;
+  let animResolve = null;
+  let debugMode = false;
+
+  const stage = document.getElementById('stage');
+  const debugOverlay = document.getElementById('debug-overlay');
+  const debugInfo = document.getElementById('debug-info');
+
+  /* ---------- Scaling ---------- */
+  function fitStage() {
+    const sw = window.innerWidth;
+    const sh = window.innerHeight;
+    const scale = Math.min(sw / 1920, sh / 1080);
+    stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+
+  /* ---------- Debug ---------- */
+  function updateDebug() {
+    if (!debugMode) return;
+    debugInfo.textContent =
+      `Scene: ${currentScene || '—'}  Step: ${currentStep}  Animating: ${animating}\n` +
+      `Viewport: ${window.innerWidth}×${window.innerHeight}  Canvas: 1920×1080`;
+  }
+
+  /* ---------- Scene lookup ---------- */
+  function getSceneEl(name) {
+    return document.getElementById('scene-' + name);
+  }
+
+  function getMaxStep(sceneEl) {
+    return parseInt(sceneEl.dataset.steps, 10) || 1;
+  }
+
+  /* ---------- Animation helpers ---------- */
+  function showElements(sceneEl, step) {
+    const els = sceneEl.querySelectorAll('.anim-el');
+    let maxDelay = 0;
+
+    els.forEach(el => {
+      const elStep = parseInt(el.dataset.step, 10);
+      if (elStep > step) {
+        // Future step — hide
+        el.classList.remove('visible');
+        return;
+      }
+      if (elStep < step) {
+        // Past step — ensure visible, no transition
+        el.style.transition = 'none';
+        el.classList.add('visible');
+        // Force reflow then restore
+        void el.offsetHeight;
+        el.style.transition = '';
+        return;
+      }
+      // Current step — animate in
+      const delay = parseInt(el.dataset.delay || '0', 10);
+      if (delay > maxDelay) maxDelay = delay;
+
+      if (document.documentElement.dataset.reducedMotion === 'true') {
+        el.classList.add('visible');
+      } else {
+        setTimeout(() => {
+          el.classList.add('visible');
+        }, delay);
+      }
+    });
+
+    return maxDelay;
+  }
+
+  /* ---------- Transition lifecycle ---------- */
+  function transitionTo(sceneName, step) {
+    return new Promise((resolve) => {
+      // Deactivate old scene
+      const allScenes = document.querySelectorAll('.scene');
+      allScenes.forEach(s => {
+        s.classList.remove('active');
+        // Reset all anim-el in non-active scenes
+        if (s.dataset.scene !== sceneName) {
+          s.querySelectorAll('.anim-el').forEach(el => {
+            el.classList.remove('visible');
+            el.style.transition = 'none';
+            void el.offsetHeight;
+            el.style.transition = '';
+          });
+        }
+      });
+
+      const sceneEl = getSceneEl(sceneName);
+      if (!sceneEl) {
+        resolve();
+        return;
+      }
+
+      currentScene = sceneName;
+      currentStep = typeof step === 'number' ? step : 0;
+      animating = true;
+      updateDebug();
+
+      // Activate scene
+      sceneEl.classList.add('active');
+
+      // Show elements for step 0 through currentStep
+      let totalDelay = 0;
+      for (let s = 0; s <= currentStep; s++) {
+        const d = showElements(sceneEl, s);
+        if (s === currentStep && d > totalDelay) totalDelay = d;
+      }
+
+      // Resolve after animations complete
+      const animDuration = document.documentElement.dataset.reducedMotion === 'true'
+        ? 0
+        : totalDelay + 500; // 500ms for the CSS transition itself
+
+      setTimeout(() => {
+        animating = false;
+        updateDebug();
+        resolve();
+      }, animDuration);
+    });
+  }
+
+  function stepTo(step) {
+    if (!currentScene) return Promise.resolve();
+    const sceneEl = getSceneEl(currentScene);
+    if (!sceneEl) return Promise.resolve();
+
+    const maxStep = getMaxStep(sceneEl);
+    step = Math.max(0, Math.min(step, maxStep - 1));
+    currentStep = step;
+    animating = true;
+    updateDebug();
+
+    return new Promise((resolve) => {
+      const delay = showElements(sceneEl, step);
+      const animDuration = document.documentElement.dataset.reducedMotion === 'true'
+        ? 0
+        : delay + 500;
+
+      setTimeout(() => {
+        animating = false;
+        updateDebug();
+        resolve();
+      }, animDuration);
+    });
+  }
+
+  /* ---------- Public API ---------- */
+  window.NeoMathRecording = {
+    /** Navigate to a scene (and optionally a step within it). Returns Promise that resolves when animations complete. */
+    goto(sceneName, step) {
+      return transitionTo(sceneName, step);
+    },
+
+    /** Reset: go to first scene, step 0. */
+    reset() {
+      return transitionTo(SCENES[0], 0);
+    },
+
+    /** Go to next step; if at last step, go to next scene step 0. */
+    next() {
+      if (!currentScene) return this.reset();
+      const sceneEl = getSceneEl(currentScene);
+      const maxStep = getMaxStep(sceneEl);
+      if (currentStep < maxStep - 1) {
+        return stepTo(currentStep + 1);
+      }
+      const idx = SCENES.indexOf(currentScene);
+      if (idx < SCENES.length - 1) {
+        return transitionTo(SCENES[idx + 1], 0);
+      }
+      return Promise.resolve(); // Already at end
+    },
+
+    /** Go to previous step; if at step 0, go to previous scene last step. */
+    prev() {
+      if (!currentScene) return Promise.resolve();
+      if (currentStep > 0) {
+        return stepTo(currentStep - 1);
+      }
+      const idx = SCENES.indexOf(currentScene);
+      if (idx > 0) {
+        const prevScene = SCENES[idx - 1];
+        const prevEl = getSceneEl(prevScene);
+        const maxStep = getMaxStep(prevEl);
+        return transitionTo(prevScene, maxStep - 1);
+      }
+      return Promise.resolve();
+    },
+
+    /** Jump to a specific step within the current scene. */
+    setStep(step) {
+      return stepTo(step);
+    },
+
+    /** Get current state. */
+    getState() {
+      return {
+        scene: currentScene,
+        step: currentStep,
+        animating: animating,
+        scenes: SCENES,
+      };
+    },
+
+    /** Returns a Promise that resolves when all current animations are complete. */
+    waitForIdle() {
+      if (!animating) return Promise.resolve();
+      return new Promise((resolve) => {
+        const check = () => {
+          if (!animating) {
+            resolve();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        requestAnimationFrame(check);
+      });
+    },
+
+    /** List of all scene names. */
+    scenes: SCENES,
+  };
+
+  /* ---------- URL params ---------- */
+  function initFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const scene = params.get('scene');
+    const step = params.get('step');
+    debugMode = params.get('debug') === '1';
+
+    if (debugMode) {
+      debugOverlay.classList.add('visible');
+    }
+
+    if (scene && SCENES.includes(scene)) {
+      transitionTo(scene, step !== null ? parseInt(step, 10) : 0);
+    } else {
+      // Default: show hook
+      transitionTo('hook', 0);
+    }
+  }
+
+  /* ---------- Keyboard nav (for manual preview) ---------- */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      window.NeoMathRecording.next();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      window.NeoMathRecording.prev();
+    } else if (e.key === 'r') {
+      window.NeoMathRecording.reset();
+    } else if (e.key === 'd') {
+      debugMode = !debugMode;
+      debugOverlay.classList.toggle('visible', debugMode);
+      updateDebug();
+    }
+  });
+
+  /* ---------- Init ---------- */
+  // Wait for fonts
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(initFromUrl);
+  } else {
+    window.addEventListener('DOMContentLoaded', initFromUrl);
+  }
+})();
+</script>
+
+</body>
+</html>

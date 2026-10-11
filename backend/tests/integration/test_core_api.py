@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import neomath_core
+from importlib.machinery import EXTENSION_SUFFIXES
 
 from neomath.core_client import NeoMathCoreClient
 
@@ -18,7 +19,7 @@ def run(source: str) -> dict:
 
 
 def test_extension_is_cpp_and_coarse_grained() -> None:
-    assert neomath_core.__file__.endswith(".pyd")
+    assert any(neomath_core.__file__.endswith(suffix) for suffix in EXTENSION_SUFFIXES)
     public = {name for name in dir(neomath_core) if not name.startswith("_")}
     assert public == {
         "analyze_document",

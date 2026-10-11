@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeoMath · 数学动态调试环境</title>
+  <link rel="stylesheet" href="vendor/katex.min.css">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="项目导航">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">N</div>
+        <div><strong>NeoMath</strong><span>The Debugger for Mathematics</span></div>
+      </div>
+      <button class="primary-action" id="new-document">＋ 新建推导</button>
+      <section class="nav-section">
+        <h2>最近文档</h2>
+        <div id="recent-documents" class="recent-list"><span class="muted">尚无最近文档</span></div>
+      </section>
+      <section class="nav-section">
+        <h2>四个演示</h2>
+        <button class="nav-item demo-button active" data-demo="lost-root"><i class="dot coral"></i>丢根</button>
+        <button class="nav-item demo-button" data-demo="extraneous-root"><i class="dot amber"></i>平方增根</button>
+        <button class="nav-item demo-button" data-demo="domain-expansion"><i class="dot violet"></i>定义域扩大</button>
+        <button class="nav-item demo-button" data-demo="semantic-completion"><i class="dot green"></i>语义补全</button>
+      </section>
+      <div class="sidebar-footer">
+        <button class="nav-item" id="tutorial-button">？ 教程</button>
+        <button class="nav-item" id="settings-button">⚙ 设置</button>
+        <button class="nav-item" id="about-button">ⓘ 关于</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="workspace-header">
+        <div>
+          <div class="eyebrow">推导会话 / <span id="document-state">已保存</span></div>
+          <input id="document-title" value="Demo 1 · 丢根" aria-label="文档标题">
+        </div>
+        <div class="header-actions">
+          <span id="core-status" class="status-pill"><i></i>正在连接 MathCore</span>
+          <button id="open-button" title="打开文档">打开</button>
+          <button id="save-button" title="保存文档 (Ctrl+S)">保存</button>
+        </div>
+      </header>
+
+      <div class="work-grid">
+        <section class="editor-panel" aria-label="推导编辑器">
+          <div class="panel-title">
+            <div><span class="step-icon">ƒ</span><strong>推导编辑器</strong></div>
+            <span class="shortcut-hint">Ctrl + Enter 运行</span>
+          </div>
+          <div class="editor-stack">
+            <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+            <textarea id="source-editor" spellcheck="false" aria-label="输入每一步代数推导"></textarea>
+          </div>
+          <div class="ai-command-bar">
+            <span aria-hidden="true">✦</span>
+            <input id="ai-command" aria-label="用自然语言描述数学操作"
+                   placeholder="例如：把这个式子因式分解（离线也可用）">
+            <button id="run-ai-command">生成并验证</button>
+          </div>
+          <div class="completion-bar" id="completion-bar" hidden>
+            <div>
+              <span class="completion-kicker">语义补全</span>
+              <select id="completion-select" aria-label="选择语义补全"></select>
+              <span id="completion-preview"></span>
+            </div>
+            <button id="apply-completion">应用并验证</button>
+          </div>
+          <div class="trace-canvas" id="trace-canvas" aria-live="polite">
+            <div class="empty-state">
+              <div class="empty-orbit">x</div>
+              <strong>写下推导，然后运行</strong>
+              <span>NeoMath 会逐步比较解集与定义域</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-label="数学检查器">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="watch" role="tab">Watch</button>
+            <button class="tab" data-tab="trace" role="tab">Trace</button>
+            <button class="tab" data-tab="explain" role="tab">Explain</button>
+          </div>
+          <section class="tab-panel active" id="tab-watch">
+            <div class="inspector-hero">
+              <span class="label">当前状态</span>
+              <strong id="watch-status">等待运行</strong>
+              <span id="watch-summary">精确 C++ 内核尚未计算</span>
+            </div>
+            <dl class="watch-grid">
+              <div><dt>解集</dt><dd id="watch-solutions">—</dd></div>
+              <div><dt>定义域</dt><dd id="watch-domain">—</dd></div>
+              <div><dt>可信级别</dt><dd id="watch-trust">—</dd></div>
+              <div><dt>耗时</dt><dd id="watch-duration">—</dd></div>
+            </dl>
+            <div class="probe-card" id="probe-card" hidden>
+              <span class="label">Probe · 检验值 / WITNESS</span>
+              <strong id="probe-value"></strong>
+              <div class="probe-comparison">
+                <span id="probe-before"></span><b>→</b><span id="probe-after"></span>
+              </div>
+              <p id="probe-reason"></p>
+            </div>
+            <div class="manual-probe">
+              <span class="label">手输 Probe</span>
+              <div class="manual-probe-row">
+                <span>x =</span>
+                <input id="manual-probe-input" inputmode="decimal" placeholder="例如 0 或 1/2" aria-label="手动输入检验值">
+                <button id="manual-probe-button" type="button">代回验证</button>
+              </div>
+              <div id="manual-probe-result" class="manual-probe-result muted">运行推导后可输入任意有理数，逐步代回每一行。</div>
+            </div>
+            <div id="step-guidance" class="step-guidance" hidden>
+              <span class="label">下一步建议</span>
+              <p id="step-guidance-text"></p>
+            </div>
+          </section>
+          <section class="tab-panel" id="tab-trace">
+            <div id="trace-list" class="trace-list"><span class="muted">运行后显示逐步诊断</span></div>
+          </section>
+          <section class="tab-panel" id="tab-explain">
+            <div class="explain-card">
+              <span class="label">学习解释</span>
+              <p id="explanation">运行后点击“解释”，离线模板或 AI 会把已验证诊断改写为学生语言。</p>
+              <span id="explanation-source" class="source-badge">C++ 真值 · AI 只改写</span>
+            </div>
+            <button class="wide-button" id="explain-button">解释当前问题</button>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="debug-toolbar">
+        <div class="run-controls">
+          <button class="run-button" id="run-button">▶ 运行</button>
+          <button id="step-button">↦ 单步</button>
+          <button id="continue-button">≫ 继续</button>
+          <button id="replay-button">↻ 重新检查</button>
+          <button id="stop-button">■ 停止</button>
+        </div>
+        <div class="toolbar-meta">
+          <button id="probe-button">◇ Probe</button>
+          <span id="line-count">1 步</span>
+          <span class="offline-badge">离线核心</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <dialog id="info-dialog">
+    <button class="dialog-close" aria-label="关闭">×</button>
+    <div id="dialog-content"></div>
+  </dialog>
+  <div id="toast" role="status"></div>
+
+  <script src="vendor/katex.min.js"></script>
+  <script src="scripts/preview-fixture.js"></script>
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>

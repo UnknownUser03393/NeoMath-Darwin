@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Project-only build, test and simulator workflow. Run from any directory."""
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+import json
+import urllib.request
+
+ROOT = Path(__file__).resolve().parents[2]
+BUILD = Path(os.environ.get("NEOMATH_IPAD_BUILD", "/tmp/NeoMathDarwin-build"))
+DEVICE_BUILD = Path(os.environ.get("NEOMATH_IPAD_DEVICE_BUILD", "/tmp/NeoMathDarwin-device-build"))
+SIMULATOR = os.environ.get("NEOMATH_IPAD_SIMULATOR", "C3B3EBC7-E1F1-4FC3-8F6A-BA7E422F2FC7")
+BUNDLE = "com.unknownuser.NeoMathDarwin"
+LOGS = Path("/tmp/neomath-ipad-logs")
+
+def run(args, *, log=None, optional=False):
+    if log:
+        LOGS.mkdir(exist_ok=True)
+        path = LOGS / log
+        with path.open("w") as out:
+            result = subprocess.run(args, cwd=ROOT, stdout=out, stderr=subprocess.STDOUT)
+        text = path.read_text(errors="replace")
+        if result.returncode:
+            errors = [line for line in text.splitlines() if "error:" in line or "failed" in line.lower() or "Precondition" in line]
+            print("\n".join(errors[-20:]) or "\n".join(text.splitlines()[-30:]))
+        else:
+            summary = [line for line in text.splitlines() if ("test" in line.lower() and "passed" in line.lower()) or "BUILD SUCCEEDED" in line]
+            print("\n".join(summary[-6:]) or "OK")
+        print(f"Log: {path}", flush=True)
+    else:
+        result = subprocess.run(args, cwd=ROOT)
+    if result.returncode and not optional:
+        raise SystemExit(result.returncode)
+    return result.returncode
+
+def generate():
+    run([sys.executable, str(ROOT / "iPad/scripts/generate_project.py")], log="project.log")
+
+def build(device=False):
+    generate()
+    run(["xcodebuild", "-project", "iPad/NeoMathDarwin.xcodeproj", "-scheme", "NeoMathDarwin", "-sdk", "iphoneos" if device else "iphonesimulator", "-configuration", "Release" if device else "Debug", "-derivedDataPath", str(DEVICE_BUILD if device else BUILD), "CODE_SIGNING_ALLOWED=NO", "build"], log="device-build.log" if device else "simulator-build.log")
+
+def install(arguments):
+    # Read state before booting; never erase the simulator or application data.
+    devices = __import__("json").loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "--json"]))
+    device = next((d for group in devices["devices"].values() for d in group if d["udid"] == SIMULATOR), None)
+    if not device:
+        raise SystemExit(f"Simulator not found: {SIMULATOR}; set NEOMATH_IPAD_SIMULATOR")
+    if device["state"] != "Booted":
+        run(["xcrun", "simctl", "boot", SIMULATOR])
+        run(["xcrun", "simctl", "bootstatus", SIMULATOR, "-b"], log="simulator-boot.log")
+    run(["open", "-a", "Simulator", "--args", "-CurrentDeviceUDID", SIMULATOR])
+    run(["xcrun", "simctl", "terminate", SIMULATOR, BUNDLE], optional=True, log="simulator-terminate.log")
+    run(["xcrun", "simctl", "install", SIMULATOR, str(BUILD / "Build/Products/Debug-iphonesimulator/NeoMathDarwin.app")])
+    run(["xcrun", "simctl", "launch", SIMULATOR, BUNDLE, *arguments])
+
+parser = argparse.ArgumentParser(description=__doc__)
+sub = parser.add_subparsers(dest="command", required=True)
+sub.add_parser("generate")
+sub.add_parser("build").add_argument("--device", action="store_true")
+sub.add_parser("test")
+sub.add_parser("test-backend", help="Native client integration tests against the running real backend")
+sub.add_parser("accept-backend", help="Record real CAS and Writing API acceptance, after simulator Writing acceptance")
+run_parser = sub.add_parser("run")
+run_parser.add_argument("--no-build", action="store_true")
+run_parser.add_argument("--canvas", action="store_true")
+backend = sub.add_parser("backend")
+backend.add_argument("--runtime", type=Path, default=ROOT / "backend/.venv")
+backend.add_argument("--data-dir", type=Path, default=Path("/tmp/neomath-ipad-acceptance"))
+backend.add_argument("--port", type=int, default=8765)
+sub.add_parser("verify")
+api = sub.add_parser("api", help="Call the real local backend; health uses GET")
+api.add_argument("method")
+api.add_argument("payload", nargs="?", default="{}")
+api.add_argument("--base", default="http://127.0.0.1:8765/api")
+shot = sub.add_parser("screenshot")
+shot.add_argument("path", type=Path)
+args = parser.parse_args()
+if args.command == "backend":
+    python = args.runtime.expanduser().resolve() / "bin/python"
+    if not python.exists():
+        run([sys.executable, "-m", "venv", str(args.runtime)], log="backend-environment.log")
+        run([str(python), "-m", "pip", "install", "./backend"], log="backend-install.log")
+    environment = dict(os.environ, NEOMATH_DATA_DIR=str(args.data_dir.expanduser().resolve()))
+    print(f"Backend: http://127.0.0.1:{args.port}/api; workspace: {environment['NEOMATH_DATA_DIR']}", flush=True)
+    raise SystemExit(subprocess.call([str(python), "-m", "neomath", "--serve", "--host", "127.0.0.1", "--port", str(args.port)], cwd=ROOT, env=environment))
+elif args.command == "api":
+    payload = json.loads(args.payload)
+    request = urllib.request.Request(args.base.rstrip("/") + "/" + args.method, data=None if args.method == "health" else json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(request, timeout=20) as response:
+        value = json.load(response)
+    print(json.dumps(value, ensure_ascii=False, indent=2))
+    if value.get("ok") is not True: raise SystemExit(1)
+elif args.command == "generate": generate()
+elif args.command == "build": build(args.device)
+elif args.command == "test": run([str(ROOT / "iPad/scripts/test_core.sh")], log="native-tests.log")
+elif args.command == "test-backend": run(["env", "NEOMATH_BACKEND_TEST=1", str(ROOT / "iPad/scripts/test_core.sh")], log="backend-client-tests.log")
+elif args.command == "accept-backend": run([sys.executable, str(ROOT / "iPad/scripts/accept_backend.py"), "--output", str(ROOT / "iPad/Reference/backend-acceptance-c269779.json")], log="backend-acceptance.log")
+elif args.command == "verify":
+    run([str(ROOT / "iPad/scripts/test_core.sh")], log="native-tests.log")
+    build(); build(True)
+elif args.command == "run":
+    if not args.no_build: build()
+    install(["--preview-canvas"] if args.canvas else [])
+elif args.command == "screenshot":
+    path = args.path.expanduser().resolve(); path.parent.mkdir(parents=True, exist_ok=True)
+    run(["xcrun", "simctl", "io", SIMULATOR, "screenshot", str(path)])

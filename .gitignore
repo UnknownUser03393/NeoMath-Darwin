@@ -1,12 +1,66 @@
+# Python / desktop
+desktop/.venv/
+desktop/venv/
+.venv/
+desktop-git-backup/
+desktop/build/
+desktop/dist/
+desktop/*.egg-info/
+desktop/src/*.egg-info/
+desktop/**/__pycache__/
+desktop/.pytest_cache/
+desktop/.mypy_cache/
+desktop/.ruff_cache/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebook UI
+ui-mockups/node_modules/
+ui-mockups/dist/
+ui-mockups/.next/
+ui-mockups/work/
+ui-mockups/tsconfig.tsbuildinfo
+ui-mockups/.vite/
+
+# Native / build artifacts
+*.py[cod]
+*.pyd
+*.dll
+*.exe
+*.obj
+*.o
+*.pdb
+*.log
+*.so
+*.dylib
+
+# OS / IDE / archives
+.DS_Store
+Thumbs.db
+desktop.zip
+*.zip
+!desktop/submission/**
+.idea/
+.vscode/
+*.swp
+*~
+
+# Darwin upstream backend and frontend
 node_modules/
 dist/
-*.log
 browser-*.png
 src (1).zip
-**/__pycache__/
-*.py[cod]
 backend/.venv/
 backend/build/
 backend/dist/
 backend/.pytest_cache/
 backend/src/*.egg-info/
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+
+# Share the reproducible SwiftPM compatibility probe
+!iPad/Experiments/*.swiftpm.zip
